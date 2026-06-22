@@ -23,8 +23,8 @@ def clean_text(text):
         return ""
     text = re.sub(r'\s+', ' ', text)
     junk_patterns = [
-        r"Chia se bai viet qua email", r"Anh:.*?\.", r"Video:.*?\.",
-        r"Doc gia.*?\.", r"Ban quyen thuoc ve.*", r"Hay gui cau hoi ve.*"
+        r"Chia sẻ bài viết qua email", r"Ảnh:.*?\.", r"Video:.*?\.",
+        r"Độc giả.*?\.", r"Bản quyền thuộc về.*", r"Hãy gửi câu hỏi về.*"
     ]
     for pattern in junk_patterns:
         text = re.sub(pattern, "", text, flags=re.IGNORECASE)
@@ -37,10 +37,10 @@ def init_warehouse_schema(cur, conn):
             cur.execute(sql_script)
             conn.commit()
     except FileNotFoundError:
-        print("[ERROR] warehouse.sql not found.")
+        print("[LỖI] Không tìm thấy file warehouse.sql.")
     except Exception as e:
         conn.rollback()
-        print(f"[ERROR] Failed to load warehouse.sql: {e}")
+        print(f"[LỖI] Không thể tải warehouse.sql: {e}")
 
 def run_etl_warehouse(limit=None):
     conn = None
@@ -63,7 +63,7 @@ def run_etl_warehouse(limit=None):
         rows = cur.fetchall()
 
         if not rows:
-            print("[!] No data in article_metadata.")
+            print("[!] Không có dữ liệu trong article_metadata.")
             return 0
 
         seen_titles = set()
@@ -76,10 +76,10 @@ def run_etl_warehouse(limit=None):
 
         total_new = len(raw_rows)
         if total_new == 0:
-            print("[OK] ETL is up-to-date!")
+            print("[OK] ETL đã Up-to-date!")
             return 0
 
-        print(f"[*] Processing {total_new} new articles...")
+        print(f"[*] Bắt đầu xử lý {total_new} bài viết mới...")
 
         processed_count = 0
         skipped_count = 0
@@ -203,14 +203,14 @@ def run_etl_warehouse(limit=None):
             except Exception as e:
                 conn.rollback()
                 error_count += 1
-                print(f"{progress} [ERROR] {title[:30]}: {e}")
+                print(f"{progress} [LỖI] {title[:30]}: {e}")
 
         conn.commit()
-        print(f"\n[ETL DONE] Processed: {processed_count} | Skipped: {skipped_count} | Errors: {error_count}")
+        print(f"\n[HOÀN TẤT] Đã xử lý: {processed_count} | Bỏ qua: {skipped_count} | Lỗi: {error_count}")
         return processed_count
 
     except Exception as e:
-        print(f"[!] Connection or processing error: {e}")
+        print(f"[!] Lỗi kết nối hoặc xử lý: {e}")
         return 0
     finally:
         if cur: cur.close()

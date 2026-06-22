@@ -27,7 +27,7 @@ class Pipeline:
             if not sources:
                 return GeneratorResponse(
                     query=query,
-                    summary="Khong tim thay nguon tin lien quan.",
+                    summary="Không tìm thấy nguồn tin nào liên quan đến câu hỏi của bạn.",
                     results=[], total=0,
                     duration_ms=(time.time() - start_time) * 1000
                 )
@@ -42,7 +42,7 @@ class Pipeline:
             logger.exception(f"Pipeline failed: {e}")
             return GeneratorResponse(
                 query=query,
-                summary="He thong AI dang gap su co. Vui long thu lai.",
+                summary="Xin lỗi, hệ thống AI hiện tại đang gặp sự cố. Vui lòng thử lại sau.",
                 results=[], total=0, duration_ms=0.0
             )
 

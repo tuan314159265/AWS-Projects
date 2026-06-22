@@ -59,7 +59,7 @@ class BaseGenerator(ABC):
     def generate(self, query: str, search_hits: List[SearchHit], is_vanilla: bool = False) -> str:
         try:
             if not search_hits:
-                return "Khong tim thay nguon tin lien quan."
+                return "Không tìm thấy nguồn tin nào liên quan."
 
             context = self._format_context(search_hits)
             chain = self._vanilla_chain if is_vanilla else self._chain
@@ -154,31 +154,31 @@ class GeneratorRegistry:
                     gen = provider_class(cfg)
                     self._generators[cfg.name] = gen
                     self._id_map[cfg.model_id] = cfg.name
-                    logger.info(f"Registered: {cfg.name} ({cfg.model_id}) via {cfg.provider}")
+                    logger.info(f"Đã đăng ký: {cfg.name} ({cfg.model_id}) qua {cfg.provider}")
                 except Exception as e:
-                    logger.error(f"Failed to init {cfg.name}: {e}")
+                    logger.error(f"Lỗi khởi tạo {cfg.name}: {e}")
 
     def get_generator(self, identifier='default') -> BaseGenerator:
         if not self._generators:
-            raise ValueError("No generators registered.")
+            raise ValueError("Không có generator nào được đăng ký.")
         if identifier in self._generators:
             return self._generators[identifier]
         name = self._id_map.get(identifier)
         if name:
             return self._generators[name]
-        raise ValueError(f"Generator '{identifier}' not found.")
+        raise ValueError(f"Không tìm thấy generator '{identifier}'.")
 
     def generate_with_fallback(self, query: str, search_hits: List[SearchHit],
                                identifier: str = 'default', fallback_identifiers: List[str] = None,
                                is_vanilla: bool = False) -> str:
         if not search_hits:
-            return "Khong tim thay nguon tin lien quan."
+            return "Không tìm thấy nguồn tin nào liên quan."
 
         try:
             gen = self.get_generator(identifier)
             return gen.generate(query, search_hits, is_vanilla)
         except Exception as e:
-            logger.error(f"Primary generator failed: {e}")
+            logger.error(f"Generator chính gặp lỗi: {e}")
 
         if fallback_identifiers is None:
             fallback_identifiers = list(self._generators.keys())
@@ -187,13 +187,13 @@ class GeneratorRegistry:
             if fallback_id == identifier:
                 continue
             try:
-                logger.info(f"Trying fallback: {fallback_id}")
+                logger.info(f"Thử fallback: {fallback_id}")
                 gen = self.get_generator(fallback_id)
                 return gen.generate(query, search_hits, is_vanilla)
             except Exception:
                 continue
 
-        return "Xin loi, he thong AI dang gap su co."
+        return "Xin lỗi, hệ thống AI hiện đang gặp sự cố."
 
     def list_generators(self) -> List[Dict[str, str]]:
         results = []

@@ -27,7 +27,7 @@ conf = {
 }
 
 def start_processing():
-    print("[Consumer] Initializing Kafka and DB connections...")
+    print("[Consumer] Đang khởi tạo kết nối Kafka và Database...")
 
     consumer = Consumer(conf)
     consumer.subscribe([os.getenv('KAFKA_TOPIC_NEWS', 'news_raw')])
@@ -41,7 +41,7 @@ def start_processing():
                 continue
 
             if msg.error():
-                print(f"[Kafka Error]: {msg.error()}")
+                print(f"[Lỗi Kafka]: {msg.error()}")
                 continue
 
             try:
@@ -49,8 +49,8 @@ def start_processing():
                 data = json.loads(raw_data)
 
                 url = data.get('url', '')
-                title = data.get('title', 'Unknown Title')
-                author = data.get('author', 'Unknown')
+                title = data.get('title', 'Không rõ tiêu đề')
+                author = data.get('author', 'Không rõ')
                 publish_date = data.get('publish_date', None)
 
                 if not url:
@@ -69,14 +69,14 @@ def start_processing():
                 print(f"[OK] {title[:50]}...")
 
             except psycopg2.InterfaceError:
-                print("[DB] Connection lost, reconnecting...")
+                print("[DB] Mất kết nối, đang thử kết nối lại...")
                 pg_conn = get_postgres_conn()
             except Exception as e:
                 pg_conn.rollback()
-                print(f"[ERROR] Skipping article: {e}")
+                print(f"[LỖI] Bỏ qua bài viết: {e}")
 
     except KeyboardInterrupt:
-        print("\n[Consumer] Stopping...")
+        print("\n[Consumer] Đang dừng...")
     finally:
         consumer.close()
         if pg_conn:

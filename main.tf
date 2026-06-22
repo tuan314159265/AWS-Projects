@@ -12,10 +12,6 @@ variable "db_user" {
   type = string
 }
 
-variable "db_host" {
-  type = string
-}
-
 variable "qdrant_api_key" {
   type      = string
   sensitive = true
@@ -38,38 +34,6 @@ variable "model_2_api_key" {
 variable "model_3_api_key" {
   type      = string
   sensitive = true
-}
-
-# --- Environment ---
-locals {
-  common_env = [
-    { name = "DB_NAME", value = "postgres" },
-    { name = "DB_USER", value = var.db_user },
-    { name = "DB_PASSWORD", value = var.db_password },
-    { name = "DB_HOST", value = var.db_host },
-    { name = "DB_PORT", value = "5432" },
-    { name = "QDRANT_HOST", value = var.qdrant_host },
-    { name = "QDRANT_PORT", value = "6333" },
-    { name = "QDRANT_API_KEY", value = var.qdrant_api_key },
-    { name = "QDRANT_COLLECTION_NAME", value = "news_chunks" },
-    { name = "KAFKA_BOOTSTRAP_SERVERS", value = "localhost:9092" },
-    { name = "KAFKA_TOPIC_NEWS", value = "news_raw" },
-    { name = "EMBEDDING_MODEL", value = "BAAI/bge-small-en-v1.5" },
-    { name = "EMBEDDING_SIZE", value = "384" },
-    { name = "NUM_MODEL_SUPPORT", value = "3" },
-    { name = "MODEL_1_NAME", value = "qwen3-8b-instant" },
-    { name = "MODEL_1_MODEL_ID", value = "qwen/qwen3-8b-instant" },
-    { name = "MODEL_1_PROVIDER", value = "groq" },
-    { name = "MODEL_1_API_KEY", value = var.model_1_api_key },
-    { name = "MODEL_2_NAME", value = "llama-3.1-8b-instant" },
-    { name = "MODEL_2_MODEL_ID", value = "meta-llama/llama-3.1-8b-instant" },
-    { name = "MODEL_2_PROVIDER", value = "groq" },
-    { name = "MODEL_2_API_KEY", value = var.model_2_api_key },
-    { name = "MODEL_3_NAME", value = "gemini-2.0-flash" },
-    { name = "MODEL_3_MODEL_ID", value = "gemini-2.0-flash" },
-    { name = "MODEL_3_API_KEY", value = var.model_3_api_key },
-    { name = "MODEL_3_PROVIDER", value = "google" }
-  ]
 }
 
 # --- VPC & Network ---
@@ -120,12 +84,63 @@ resource "aws_security_group" "ecs_sg" {
   name   = "newsrag-ecs-sg"
   vpc_id = aws_vpc.main.id
 
+  # Cho phép ECS truy cập Internet (download model, gọi API)
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+}
+
+resource "aws_security_group" "rds_sg" {
+  name   = "newsrag-rds-sg"
+  vpc_id = aws_vpc.main.id
+
+  # Cho phép ECS truy cập RDS trên cổng 5432
+  ingress {
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ecs_sg.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# --- RDS PostgreSQL (Tự động tạo DB) ---
+resource "aws_db_subnet_group" "main" {
+  name       = "newsrag-db-subnet"
+  subnet_ids = [aws_subnet.pub_a.id, aws_subnet.pub_b.id]
+}
+
+resource "aws_rds_cluster" "main" {
+  cluster_identifier     = "newsrag-postgres"
+  engine                 = "aurora-postgresql"
+  engine_version         = "15.4"
+  database_name          = "newsrag"
+  master_username        = var.db_user
+  master_password        = var.db_password
+  db_subnet_group_name   = aws_db_subnet_group.main.name
+  vpc_security_group_ids = [aws_security_group.rds_sg.id]
+  skip_final_snapshot    = true
+
+  tags = { Name = "newsrag-postgres" }
+}
+
+resource "aws_rds_cluster_instance" "main" {
+  identifier         = "newsrag-postgres-1"
+  cluster_identifier = aws_rds_cluster.main.id
+  instance_class     = "db.t4g.medium"  # 2 vCPU, 4GB RAM - nhe va on dinh
+  engine             = aws_rds_cluster.main.engine
+  engine_version     = aws_rds_cluster.main.engine_version
+
+  tags = { Name = "newsrag-postgres-instance" }
 }
 
 # --- ECR ---
@@ -170,7 +185,39 @@ resource "aws_cloudwatch_log_group" "logs" {
   retention_in_days = 7
 }
 
-# --- Task Definitions (Lighter: Fargate Spot friendly) ---
+# --- Environment Variables (Dùng RDS endpoint tự động) ---
+locals {
+  common_env = [
+    { name = "DB_NAME", value = "newsrag" },
+    { name = "DB_USER", value = var.db_user },
+    { name = "DB_PASSWORD", value = var.db_password },
+    { name = "DB_HOST", value = aws_rds_cluster.main.endpoint },
+    { name = "DB_PORT", value = "5432" },
+    { name = "QDRANT_HOST", value = var.qdrant_host },
+    { name = "QDRANT_PORT", value = "6333" },
+    { name = "QDRANT_API_KEY", value = var.qdrant_api_key },
+    { name = "QDRANT_COLLECTION_NAME", value = "news_chunks" },
+    { name = "KAFKA_BOOTSTRAP_SERVERS", value = "localhost:9092" },
+    { name = "KAFKA_TOPIC_NEWS", value = "news_raw" },
+    { name = "EMBEDDING_MODEL", value = "BAAI/bge-small-en-v1.5" },
+    { name = "EMBEDDING_SIZE", value = "384" },
+    { name = "NUM_MODEL_SUPPORT", value = "3" },
+    { name = "MODEL_1_NAME", value = "qwen3-8b-instant" },
+    { name = "MODEL_1_MODEL_ID", value = "qwen/qwen3-8b-instant" },
+    { name = "MODEL_1_PROVIDER", value = "groq" },
+    { name = "MODEL_1_API_KEY", value = var.model_1_api_key },
+    { name = "MODEL_2_NAME", value = "llama-3.1-8b-instant" },
+    { name = "MODEL_2_MODEL_ID", value = "meta-llama/llama-3.1-8b-instant" },
+    { name = "MODEL_2_PROVIDER", value = "groq" },
+    { name = "MODEL_2_API_KEY", value = var.model_2_api_key },
+    { name = "MODEL_3_NAME", value = "gemini-2.0-flash" },
+    { name = "MODEL_3_MODEL_ID", value = "gemini-2.0-flash" },
+    { name = "MODEL_3_API_KEY", value = var.model_3_api_key },
+    { name = "MODEL_3_PROVIDER", value = "google" }
+  ]
+}
+
+# --- Task Definitions ---
 
 resource "aws_ecs_task_definition" "crawler" {
   family                   = "newsrag-crawler"
@@ -307,4 +354,17 @@ resource "aws_cloudwatch_event_target" "vectorize_target" {
       assign_public_ip = true
     }
   }
+}
+
+# --- Outputs ---
+output "rds_endpoint" {
+  value = aws_rds_cluster.main.endpoint
+}
+
+output "ecr_repository_url" {
+  value = aws_ecr_repository.api.repository_url
+}
+
+output "ecs_cluster_name" {
+  value = aws_ecs_cluster.cluster.name
 }

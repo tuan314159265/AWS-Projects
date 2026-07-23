@@ -53,6 +53,20 @@ def start_processing():
 
     pg_conn = get_postgres_conn()
 
+    # Init staging table if not exists
+    with pg_conn.cursor() as cur:
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS article_metadata (
+                url_hash TEXT PRIMARY KEY,
+                url TEXT,
+                title TEXT,
+                content TEXT,
+                author TEXT,
+                publish_date TEXT
+            );
+        """)
+    pg_conn.commit()
+
     try:
         while True:
             msg = consumer.poll(1.0)

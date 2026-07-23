@@ -370,17 +370,17 @@ Ngoài ra cần thêm: `AmazonSQSReadOnlyAccess`, `SecretsManagerReadWrite`, và
 | Thành viên | Module              | AWS Services                                           | Công việc chính                                                                                                                                         |
 | ---------- | ------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Trọng**  | Crawl + Queue       | ECS Fargate, SQS, ECR, Docker                          | Dockerfile cho Fargate Crawler, cấu hình SQS + Dead Letter Queue, deploy Docker image lên ECR, viết Sitemap Spider cho Scrapy crawl 3 báo               |
-| **Tiến**   | Consumer + Database | Lambda, Aurora, pgvector, Secrets Manager              | Lambda Consumer (trigger SQS), tạo Aurora cluster + pgvector, viết init schema SQL (articles + article_chunks + HNSW index), quản lý connection pooling |
-| **Tuấn**   | ETL + Embedding     | Lambda, Bedrock, S3 (artifact)                         | Lambda ETL: clean HTML, chunk text, gọi Bedrock Titan Embed, insert vector vào Aurora. Xử lý retry khi Bedrock rate limit                               |
-| **Ly**     | RAG API + Frontend  | Lambda, API Gateway, Groq/Gemini API, Next.js, FastAPI | Lambda RAG: embed query → search pgvector → gọi LLM. API Gateway REST endpoint, CORS + error handling. Frontend: Dashboard, Search, Chat, Explorer      |
+| **Tiến**   | Consumer + Database | AWS Lambda, Aurora pgvector, RDS Proxy, Secrets Manager              | Lambda Consumer (trigger SQS), khởi tạo Aurora cluster + pgvector, viết init schema SQL (articles + article_chunks + HNSW index), quản lý RDS Proxy connection pooling. |
+| **Tuấn**   | Frontend + Infra Lead    | Next.js, S3, CloudFront, CloudWatch, Terraform, GitHub Actions | Xây dựng Frontend Next.js (Dashboard, Search, Chat interface, Explorer), tích hợp API Gateway (xử lý state, streaming response), cấu hình CloudWatch monitoring, dựng khung Terraform IaC & CI/CD pipeline. |
+| **Ly**     | RAG API + Embedding  |  AWS Lambda, Bedrock (Titan Embeddings), Groq/Bedrock LLM, API Gateway | Lambda ETL Vectorize (clean HTML, chunk text, gọi Bedrock Titan Embed), Lambda RAG (embed query -> search HNSW pgvector -> prompt context -> gọi LLM). |
 
 ### Timeline 4 tuần
 
 | Tuần  | Trọng                             | Tiến                                    | Tuấn                                      | Ly                                    |
 | ----- | --------------------------------- | --------------------------------------- | ----------------------------------------- | ------------------------------------- |
-| **1** | Dockerfile, SQS queue, deploy ECR | Lambda Consumer, init Aurora + pgvector | Lambda ETL: clean + chunk + Bedrock embed | Lambda RAG: embed + pgvector search   |
-| **2** | Sitemap spider, test crawl → SQS  | Test Consumer → Aurora, HNSW index      | ETL full flow, batch processing           | API Gateway + Frontend: Chat page     |
-| **3** | EventBridge schedule, DLQ config  | Monitoring, CloudWatch                  | Retry logic, error handling               | Frontend: Dashboard, Search, Explorer |
+| **1** | Dockerfile, SQS queue, deploy ECR | Lambda Consumer, init Aurora + pgvector |  Setup Next.js boilerplate, UI layout Chat & Search page, GitHub Repo| Lambda ETL: clean + chunk + Bedrock embed |
+| **2** | Sitemap spider, test crawl → SQS  | Test Consumer → Aurora, HNSW index      | API Gateway + Frontend: Chat page        |  Hoàn thiện Vectorize pipeline (insert vector), viết RAG (Search + Prompting LLM). |
+| **3** | EventBridge schedule, DLQ config  | Monitoring, CloudWatch                  | Frontend: Dashboard, Search, Explorer              | Retry logic, error handling  |
 | **4** | Terraform + CI/CD                 | Terraform + CI/CD                       | Terraform + CI/CD                         | Terraform + CI/CD, integration test   |
 
 ---

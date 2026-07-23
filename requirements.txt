@@ -9,10 +9,11 @@ lxml_html_clean
 qdrant_client
 langchain_text_splitters
 pydantic_settings
-langchain_openai
-langchain_google_genai
 langchain_ollama
 langchain_groq
-sentence-transformers
 python-dotenv
 schedule
+pgvector
+sqlalchemy
+langchain_aws
+

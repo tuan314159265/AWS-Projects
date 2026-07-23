@@ -28,8 +28,27 @@ conf = {
 
 def start_processing():
     print("[Consumer] Đang khởi tạo kết nối Kafka và Database...")
-
+    #Debug
+    print(conf)
+    print("Topic:", os.getenv("KAFKA_TOPIC_NEWS"))
+    # End debug
     consumer = Consumer(conf)
+
+    # Debug
+    md = consumer.list_topics(topic="raw_news_topic", timeout=10)
+
+    print(md.topics)
+
+    print("\n=== Brokers ===")
+    for broker in md.brokers.values():
+        print(broker)
+
+    print("\n=== Topics ===")
+    for topic in md.topics.keys():
+        print(topic)
+
+    # End debug
+
     consumer.subscribe([os.getenv('KAFKA_TOPIC_NEWS', 'news_raw')])
 
     pg_conn = get_postgres_conn()

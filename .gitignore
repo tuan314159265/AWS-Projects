@@ -9,3 +9,4 @@ model_cache/
 terraform.tfstate
 terraform.tfstate.backup
 *.tfvars
+tests/

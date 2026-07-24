@@ -261,3 +261,4 @@ class GeneratorRegistry:
             results.append({"name": name, "model_id": model_id, "provider": gen._config.provider})
         return results
 
+generator_registry = GeneratorRegistry()

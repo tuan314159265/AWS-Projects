@@ -4,8 +4,8 @@ from typing import List
 from .retriever import Retriever
 from .generator import GeneratorRegistry
 from .schemas import SearchHit, GeneratorResponse
-from ..utils.logger import get_logger
-from ..utils.config import get_settings
+from utils.logger import get_logger
+from utils.config import get_settings
 
 logger = get_logger(__name__)
 settings = get_settings()

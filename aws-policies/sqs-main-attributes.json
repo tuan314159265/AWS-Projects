@@ -1,0 +1,5 @@
+{
+  "VisibilityTimeout": "300",
+  "MessageRetentionPeriod": "86400",
+  "RedrivePolicy": "{\"deadLetterTargetArn\":\"arn:aws:sqs:ap-southeast-2:814808959551:newsrag-raw-news-dlq\",\"maxReceiveCount\":\"3\"}"
+}

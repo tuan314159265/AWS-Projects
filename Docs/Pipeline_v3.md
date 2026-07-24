@@ -369,14 +369,14 @@ Ngoài ra cần thêm: `AmazonSQSReadOnlyAccess`, `SecretsManagerReadWrite`, và
 
 | Thành viên | Module              | AWS Services                                           | Công việc chính                                                                                                                                         |
 | ---------- | ------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Tôi**      | Crawl + Queue       | ECS Fargate, SQS, ECR, Docker                          | Dockerfile cho Fargate Crawler, cấu hình SQS + Dead Letter Queue, deploy Docker image lên ECR, viết Sitemap Spider cho Scrapy crawl 3 báo               |
-| **B**      | Consumer + Database | Lambda, Aurora, pgvector, Secrets Manager              | Lambda Consumer (trigger SQS), tạo Aurora cluster + pgvector, viết init schema SQL (articles + article_chunks + HNSW index), quản lý connection pooling |
-| **C**      | ETL + Embedding     | Lambda, Bedrock, S3 (artifact)                         | Lambda ETL: clean HTML, chunk text, gọi Bedrock Titan Embed, insert vector vào Aurora. Xử lý retry khi Bedrock rate limit                               |
-| **D**      | RAG API + Frontend  | Lambda, API Gateway, Groq/Gemini API, Next.js, FastAPI | Lambda RAG: embed query → search pgvector → gọi LLM. API Gateway REST endpoint, CORS + error handling. Frontend: Dashboard, Search, Chat, Explorer      |
+| **Trọng**  | Crawl + Queue       | ECS Fargate, SQS, ECR, Docker                          | Dockerfile cho Fargate Crawler, cấu hình SQS + Dead Letter Queue, deploy Docker image lên ECR, viết Sitemap Spider cho Scrapy crawl 3 báo               |
+| **Tiến**   | Consumer + Database | Lambda, Aurora, pgvector, Secrets Manager              | Lambda Consumer (trigger SQS), tạo Aurora cluster + pgvector, viết init schema SQL (articles + article_chunks + HNSW index), quản lý connection pooling |
+| **Tuấn**   | ETL + Embedding     | Lambda, Bedrock, S3 (artifact)                         | Lambda ETL: clean HTML, chunk text, gọi Bedrock Titan Embed, insert vector vào Aurora. Xử lý retry khi Bedrock rate limit                               |
+| **Ly**     | RAG API + Frontend  | Lambda, API Gateway, Groq/Gemini API, Next.js, FastAPI | Lambda RAG: embed query → search pgvector → gọi LLM. API Gateway REST endpoint, CORS + error handling. Frontend: Dashboard, Search, Chat, Explorer      |
 
 ### Timeline 4 tuần
 
-| Tuần  | A                                 | B                                       | C                                         | D                                     |
+| Tuần  | Trọng                             | Tiến                                    | Tuấn                                      | Ly                                    |
 | ----- | --------------------------------- | --------------------------------------- | ----------------------------------------- | ------------------------------------- |
 | **1** | Dockerfile, SQS queue, deploy ECR | Lambda Consumer, init Aurora + pgvector | Lambda ETL: clean + chunk + Bedrock embed | Lambda RAG: embed + pgvector search   |
 | **2** | Sitemap spider, test crawl → SQS  | Test Consumer → Aurora, HNSW index      | ETL full flow, batch processing           | API Gateway + Frontend: Chat page     |

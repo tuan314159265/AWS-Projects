@@ -1,92 +1,63 @@
-import gc
-import threading
+"""
+Retriever Module.
+
+This module provides the retrieval engine for the RAG pipeline. It handles
+the transformation of user queries into vector embeddings and fetches the
+most semantically similar documents from the vector store.
+"""
+from __future__ import annotations
 from typing import List
 
-from qdrant_client import QdrantClient
-from qdrant_client.models import Filter, FieldCondition, MatchValue
-from sentence_transformers import SentenceTransformer
-
-from .config import settings
-from .logger_setup import logger
+from utils.logger import get_logger
+from vectorize.embedder.bedrock import BedrockEmbedder
+from vectorize.repository.vector_repository import VectorRepository
 from .schemas import SearchHit
+from utils.config import get_settings
 
+logger = get_logger(__name__)
+settings = get_settings()
 
 class Retriever:
     """
-    Lightweight dense-only retriever. No reranking, no sparse vectors.
-    Uses sentence-transformers for embedding and Qdrant for vector search.
+    Retriever class for the RAG FastAPI backend.
     """
 
-    _instance = None
-    _lock = threading.Lock()
-    _is_initialized = False
+    def __init__(
+        self
+    ) -> None:
+        logger.info("[RETRIEVER] Initializing RetrievalService...")
+        self._embedder = BedrockEmbedder()
+        self._vector_store = VectorRepository()
+        self._top_k = settings.retrieval.top_k
 
-    def __new__(cls):
-        with cls._lock:
-            if cls._instance is None:
-                cls._instance = super(Retriever, cls).__new__(cls)
-        return cls._instance
-
-    def __init__(self):
-        with self.__class__._lock:
-            if self._is_initialized:
-                return
-            self._initialize()
-            self.__class__._is_initialized = True
-
-    def _initialize(self):
-        try:
-            logger.info(f"Initializing embedding model: {settings.model.embedding}")
-            self.embedding_model = SentenceTransformer(settings.model.embedding)
-
-            logger.info(f"Connecting to Qdrant: {settings.search.qdrant_url}")
-            self.qdrant_client = QdrantClient(
-                url=settings.search.qdrant_url,
-                port=settings.search.port,
-                api_key=settings.search.api_key,
-                grpc_port=settings.search.grpc_port,
-                timeout=60
-            )
-            logger.info("Retriever initialized successfully.")
-        except Exception as e:
-            logger.error(f"Retriever init failed: {e}")
-            raise
 
     def search(self, query: str) -> List[SearchHit]:
+        "Perform a semantic search based on the user's query."
         try:
-            logger.info(f"Searching: {query}")
-            query_embedding = self.embedding_model.encode(query, normalize_embeddings=True).tolist()
+            logger.info(f"[RETRIEVER] Searching results for query: {query}")
+            query_embedding = self._embedder.embed_query(query=query)
 
-            results = self.qdrant_client.search(
-                collection_name=settings.search.collection_name,
-                query_vector=query_embedding,
-                limit=settings.model.top_k
-            )
+            raw_results = self._vector_store.search_vectors(query_embedding=query_embedding, 
+                                                            top_k=self._top_k)
 
-            search_hits = []
-            for result in results:
-                payload = result.payload or {}
+            search_hits: List[SearchHit] = []
+            for chunk, distance in raw_results:
+                similarity_score = 1.0 - distance
+        
                 hit = SearchHit(
-                    id=str(result.id),
-                    title=str(payload.get("title", "No Title")),
-                    content=str(payload.get("content", "")),
-                    url=str(payload.get("url", "#")),
-                    score=result.score if result.score else 0.0,
-                    metadata={k: v for k, v in payload.items()
-                              if k not in {"title", "url", "content"}}
+                    id=f"{chunk.article_id}_{chunk.chunk_index}",
+                    title=chunk.title,
+                    content=chunk.content,
+                    url=chunk.url,
+                    score=similarity_score,
+                    metadata={
+                        "authors": chunk.authors,
+                        "publish_timestamp": chunk.publish_timestamp,
+                        "distance": distance
+                    }
                 )
                 search_hits.append(hit)
 
-            return search_hits
-
         except Exception as e:
-            logger.error(f"Search failed: {e}")
+            logger.error(f"[RETRIEVER] Search failed: {e}")
             return []
-
-    @classmethod
-    def clear_instance(cls):
-        if cls._instance:
-            cls._instance = None
-            cls._is_initialized = False
-            gc.collect()
-            logger.info("Retriever cleared.")

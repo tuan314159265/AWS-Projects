@@ -1,53 +1,35 @@
-.PHONY: help setup up down restart crawl full run-crawl run-etl run-vectorize clean test-interactive test-gen
+.PHONY: help setup backend frontend venv crawl migrate clean
 
-PYTHON = venv/bin/python
-SCRAPY = venv/bin/scrapy
-DOCKER_COMPOSE = docker-compose
+PYTHON = venv/bin/python3
 UVICORN = venv/bin/uvicorn
+SCRAPY = venv/bin/scrapy
 
-setup:
+help:
+	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | sort | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
+
+setup: venv data/config ## First-time project setup
+
+venv: ## Create virtualenv and install deps
 	python3 -m venv venv
 	./venv/bin/pip install -r requirements.txt
-	@echo "[SETUP] Environment created."
 
-up:
-	$(DOCKER_COMPOSE) up -d
-	@echo "[DOCKER] Postgres + Kafka started."
+backend: ## Start FastAPI backend (port 8000)
+	$(UVICORN) app.api:app --reload --port 8000
 
-down:
-	$(DOCKER_COMPOSE) down
+frontend: ## Start Next.js frontend (port 3000)
+	cd frontend && npm run dev
 
-restart: down up
+crawl: ## Crawl news articles into data/articles.json
+	PYTHONPATH=. $(SCRAPY) crawl news_rag_spider -s "ITEM_PIPELINES={}" -o data/articles.json
 
-full:
-	@echo "[PIPELINE] Running full pipeline: Crawl -> ETL -> Vectorize..."
-	$(PYTHON) main.py --mode full
+migrate: ## Migrate articles.json -> RDS star-schema
+	$(PYTHON) init_db/migrate_to_star_schema.py
 
-auto:
-	@echo "[PIPELINE] Running auto mode (3 runs/day)..."
-	$(PYTHON) main.py --mode auto
-
-run-crawl:
-	$(PYTHON) main.py --mode crawl
-
-run-etl:
-	$(PYTHON) main.py --mode etl
-
-run-vectorize:
-	$(PYTHON) main.py --mode vectorize
-
-crawl:
-	export PYTHONPATH=. && $(SCRAPY) crawl news_rag_spider
-
-test-interactive:
-	PYTHONPATH=. $(PYTHON) -m tests.search.test_interactive
-
-test-gen:
-	PYTHONPATH=. $(PYTHON) -m tests.search.test_generator
-
-run-fastapi:
-	$(UVICORN) app.api:app --reload
-
-clean:
+clean: ## Remove caches
 	find . -type d -name "__pycache__" -exec rm -rf {} +
-	@echo "[CLEAN] Done."
+	rm -rf .next/ data/ .pytest_cache
+
+data/config:
+	mkdir -p data
+	@echo "Ready"

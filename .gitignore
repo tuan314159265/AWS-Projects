@@ -5,8 +5,12 @@ __pycache__/
 data/
 model_cache/
 *.log
+logs/
+node_modules/
+.next/
 .terraform/
 terraform.tfstate
 terraform.tfstate.backup
 *.tfvars
 tests/
+

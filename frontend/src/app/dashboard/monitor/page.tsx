@@ -1,18 +1,18 @@
 "use client";
 import React, { useEffect, useState } from 'react';
 import { Activity, Database, Server, Zap, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
+import { api } from '../../../lib/api';
 
 export default function PipelineMonitor() {
   const [data, setData] = useState<any>(null);
 
   useEffect(() => {
     const fetchData = async () => {
-      const res = await fetch('/pipeline/status');
-      const json = await res.json();
-      setData(json);
+      try { setData(await api.pipelineStatus()); }
+      catch { /* ignore polling errors */ }
     };
     fetchData();
-    const interval = setInterval(fetchData, 5000); // Cập nhật mỗi 5 giây
+    const interval = setInterval(fetchData, 5000);
     return () => clearInterval(interval);
   }, []);
 

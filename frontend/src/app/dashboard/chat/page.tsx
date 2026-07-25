@@ -1,9 +1,10 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
-import { 
+import {
   Send, Bot, User, Cpu, Sparkles, Loader2, Database, ChevronDown, Scale, Search
 } from 'lucide-react';
 import { marked } from 'marked';
+import { api, ApiError } from '../../../lib/api';
 
 // --- MỞ RỘNG INTERFACE ĐỂ CHỨA NHIỀU LOẠI DATA ---
 interface Message {
@@ -55,21 +56,12 @@ export default function ChatPage() {
   }, [messages]);
 
   useEffect(() => {
-    const fetchModels = async () => {
-      try {
-        const res = await fetch('/models');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.models && data.models.length > 0) {
-            setModels(data.models);
-            setSelectedModel(data.models[0].name);
-          }
-        }
-      } catch (error) {
-        console.error("Lỗi lấy danh sách models:", error);
+    api.models().then((data) => {
+      if (data.models?.length) {
+        setModels(data.models);
+        setSelectedModel(data.models[0].name);
       }
-    };
-    fetchModels();
+    }).catch((e) => console.error("Lỗi lấy models:", e));
   }, []);
 
   const filterThinkingProcess = (content: string) => {
@@ -92,62 +84,105 @@ export default function ChatPage() {
     setIsLoading(true);
     setActionType(type);
 
-    let endpoint = "/search";
-    if (type === 'retrieve') endpoint = "/search/retrieve";
-    if (type === 'compare') endpoint = "/search/compare";
+    // RAG type uses SSE streaming
+    if (type === 'rag') {
+      try {
+        const BASE = process.env.NEXT_PUBLIC_API_URL || '';
+        const res = await fetch(`${BASE}/chat/stream`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: userMessage.content, model: selectedModel }),
+        });
 
+        if (!res.ok) throw new Error('Stream connection failed');
+
+        const aiId = (Date.now() + 1).toString();
+        let content = '';
+        let meta: any = { sourcesCount: 0, sources: [], duration: 0 };
+
+        // Create placeholder message first
+        setMessages(prev => [...prev, {
+          id: aiId, role: 'ai', type: 'rag', model: selectedModel,
+          content: '', sourcesCount: 0, sources: [], duration: 0,
+        }]);
+
+        const reader = res.body?.getReader();
+        const decoder = new TextDecoder();
+        if (!reader) throw new Error('No reader');
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const text = decoder.decode(value);
+          const lines = text.split('\n').filter(l => l.startsWith('data: '));
+
+          for (const line of lines) {
+            const payload = line.slice(6); // remove 'data: '
+            if (payload === '[DONE]') continue;
+            content += payload.replace(/\\n/g, '\n');
+
+            // Update message progressively
+            setMessages(prev =>
+              prev.map(m => m.id === aiId ? {
+                ...m,
+                content: filterThinkingProcess(content),
+                sourcesCount: meta.sourcesCount,
+                sources: meta.sources,
+              } : m)
+            );
+          }
+        }
+
+        setMessages(prev =>
+          prev.map(m => m.id === aiId ? {
+            ...m,
+            content: filterThinkingProcess(content),
+            sourcesCount: meta.sourcesCount,
+            sources: meta.sources,
+          } : m)
+        );
+      } catch (error) {
+        console.error("Lỗi chat stream:", error);
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(), role: 'ai', type: 'error',
+          content: 'Đã có lỗi xảy ra khi kết nối tới hệ thống AI.',
+        }]);
+      } finally {
+        setIsLoading(false);
+        setActionType('');
+      }
+      return;
+    }
+
+    // Non-streaming: retrieve / compare
     try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: userMessage.content,
-          model: selectedModel
-        }),
-      });
+      let data: any;
+      if (type === 'retrieve') data = await api.retrieve(userMessage.content!);
+      else data = await api.compare(userMessage.content!, selectedModel);
 
-      if (!res.ok) throw new Error("Lỗi kết nối Backend");
-      const data = await res.json();
-      
       const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'ai',
-        type: type,
-        model: selectedModel,
+        id: (Date.now() + 1).toString(), role: 'ai', type, model: selectedModel,
       };
 
-      // Xử lý dữ liệu dựa trên loại request
-      if (type === 'rag') {
-        const rawContent = data.raw_data?.summary || '';
-        aiMessage.content = filterThinkingProcess(rawContent) || 'Xin lỗi, tôi không tìm thấy thông tin phù hợp.';
-        aiMessage.sourcesCount = data.raw_data?.total || 0;
-        aiMessage.sources = data.raw_data?.results || [];
-        aiMessage.duration = data.raw_data?.duration_ms;
-      } 
-      else if (type === 'retrieve') {
-        aiMessage.sourcesCount = data.total_found || 0;
-        aiMessage.retrieveResults = data.results || [];
-      } 
-      else if (type === 'compare') {
-        aiMessage.contextDocsCount = data.context_documents || 0;
-        aiMessage.comparisons = (data.model_responses || []).map((m: any) => {
-           let text = typeof m.response === 'object' ? m.response.summary : m.response;
-           return {
-             model: m.model,
-             response: filterThinkingProcess(text)
-           };
-        });
+      if (type === 'retrieve') {
+        const rd = data as any;
+        aiMessage.sourcesCount = rd.total_found || 0;
+        aiMessage.retrieveResults = rd.results || [];
+      } else {
+        const cd = data as any;
+        aiMessage.contextDocsCount = cd.context_documents || 0;
+        aiMessage.comparisons = (cd.model_responses || []).map((m: any) => ({
+          model: m.model, response: filterThinkingProcess(typeof m.response === 'object' ? m.response.summary : m.response),
+        }));
       }
 
       setMessages(prev => [...prev, aiMessage]);
-
     } catch (error) {
       console.error("Lỗi chat:", error);
       setMessages(prev => [...prev, {
-        id: Date.now().toString(),
-        role: 'ai',
-        type: 'error',
-        content: 'Đã có lỗi xảy ra khi kết nối tới hệ thống AI. Vui lòng kiểm tra lại Backend.',
+        id: Date.now().toString(), role: 'ai', type: 'error',
+        content: 'Đã có lỗi xảy ra.',
       }]);
     } finally {
       setIsLoading(false);

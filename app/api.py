@@ -2,7 +2,7 @@ import re
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 import time
 import os
@@ -20,6 +20,7 @@ load_dotenv()
 from search.engine import Pipeline
 from search.generator import generator_registry
 from search.retriever import Retriever
+from .monitoring import put_search_metric, start_metrics_flusher
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -32,6 +33,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Start CloudWatch metrics flusher
+start_metrics_flusher()
 
 # --- DATABASE CONNECTION ---
 def get_db_connection():
@@ -112,6 +116,11 @@ async def search(request: SearchRequest):
             "formatted_answer": formatted_output
         }
     except Exception as e:
+        import time as _time
+        duration = getattr(response, 'duration_ms', 0) or 0
+        total_hits = getattr(response, 'total', 0) or 0
+        put_search_metric(duration, len(request.query), total_hits)
+
         logger.error(f"Search error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -206,6 +215,24 @@ async def compare_all_models(request: SearchRequest):
     except Exception as e:
         logger.error(f"Compare error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# --- STREAMING CHAT ---
+
+@app.post("/chat/stream")
+async def chat_stream(request: SearchRequest):
+    """SSE streaming endpoint for Chat UI."""
+    if not request.query.strip():
+        raise HTTPException(status_code=400, detail="Query is required")
+    p = get_pipeline()
+    return StreamingResponse(
+        p.stream_answer(request.query.strip(), model=request.model),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
 
 # --- DATABASE REST ROUTES ---
 

@@ -1,60 +1,50 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { 
-  RefreshCw, FileText, Globe, Clock, Box,
-  TrendingUp, PieChart as PieIcon, Users, Tag, Activity, Server, Database
+import {
+  RefreshCw, FileText, Clock, Box,
+  TrendingUp, PieChart as PieIcon, Users, Activity, Server, Database
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import StatCard from '../../components/StatCard';
+import { api, ApiError } from '../../lib/api';
 
+const COLORS = ['#3b82f6', '#10b981', '#ef4444', '#f59e0b', '#8b5cf6', '#06b6d4'];
 
 export default function DashboardPage() {
-  // --- STATE LƯU DỮ LIỆU THẬT ---
-  const [stats, setStats] = useState({ 
-    total_articles: 0, 
-    total_sources: 0, 
+  const [stats, setStats] = useState({
+    total_articles: 0,
+    total_sources: 0,
     total_vectors: 0,
     top_authors: [] as any[],
-    source_distribution: [] as any[], // Thêm mảng này
-    trend_data: [] as any[], // Thêm mảng này
-    latest_articles: [] as any[] // Dành cho phần bài viết mới nhất ở dưới (nếu có)
+    source_distribution: [] as any[],
+    trend_data: [] as any[],
+    latest_articles: [] as any[]
   });
-
-  // Mảng màu sắc tự động (Hỗ trợ tối đa 6 đầu báo, nếu có nhiều báo hơn nó sẽ quay vòng lại)
-  const COLORS = ['#3b82f6', '#10b981', '#ef4444', '#f59e0b', '#8b5cf6', '#06b6d4'];
-  
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // --- HÀM GỌI API THẬT ---
   const fetchStats = async () => {
     setIsRefreshing(true);
     try {
-      const res = await fetch('/stats');
-      if (res.ok) {
-        const data = await res.json();
-        setStats({
-          total_articles: data.total_articles || 0,
-          total_sources: data.total_sources || 0,
-          total_vectors: data.total_vectors || 0,
-          top_authors: data.top_authors || [],
-          source_distribution: (data.source_distribution || []).map((item: any, idx: number) => ({
-            ...item,
-            color: COLORS[idx % COLORS.length]
-          })),
-          trend_data: data.trend_data || [], // <-- Đổ data vào State
-          latest_articles: data.latest_articles || [] // <-- Thêm dòng này
-        });
-      }
-    } catch (error) {
-      console.error("Lỗi fetch stats:", error);
+      const data = await api.stats();
+      setStats({
+        total_articles: data.total_articles || 0,
+        total_sources: data.total_sources || 0,
+        total_vectors: data.total_vectors || 0,
+        top_authors: data.top_authors || [],
+        source_distribution: (data.source_distribution || []).map((item, idx) => ({
+          ...item, color: COLORS[idx % COLORS.length]
+        })),
+        trend_data: data.trend_data || [],
+        latest_articles: data.latest_articles || []
+      });
+    } catch (e) {
+      console.error("Lỗi fetch stats:", e);
     } finally {
       setTimeout(() => setIsRefreshing(false), 500);
     }
   };
 
-  useEffect(() => {
-    fetchStats();
-  }, []);
+  useEffect(() => { fetchStats(); }, []);
 
   return (
     <div className="p-6 md:p-8 space-y-6 bg-[#f8fafc] min-h-screen">

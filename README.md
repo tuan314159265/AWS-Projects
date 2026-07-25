@@ -198,3 +198,50 @@ Mã nguồn Terraform trong dự án triển khai các tài nguyên AWS sau:
    ```
 3. **Chạy thủ công các ECS Fargate Tasks (nếu cần)**:
    Bạn có thể kích hoạt các ECS Task trực tiếp thông qua AWS CLI hoặc Console bằng các task definition đã tạo sẵn (`newsrag-crawler`, `newsrag-etl`, `newsrag-vectorize`).
+
+---
+
+## Cập nhật gần đây (July 2026)
+
+### Frontend API Client Refactor
+- **`frontend/src/lib/api.ts`** -- Centralized API client với `useApi<T>()` hook pattern. Mỗi page không còn tự fetch trực tiếp nữa.
+- **`frontend/src/lib/types.ts`** -- Shared TypeScript interfaces: `Source`, `Article`, `Stats`, `ModelInfo`, `SearchHit`, `SearchResponse`.
+- Các page đã refactor: dashboard, search, chat, monitor -- dùng `api.stats()`, `api.articles()`, `api.models()`, etc.
+- **`frontend/next.config.ts`** -- Bỏ rewrites proxy. API URL lấy từ `NEXT_PUBLIC_API_URL` (env var).
+  - Local: `NEXT_PUBLIC_API_URL=http://localhost:8000`
+  - AWS: set to API Gateway URL
+
+### Streaming Response (SSE)
+- **`POST /chat/stream`** -- Endpoint mới trả về `text/event-stream` cho Chat UI.
+- **`search/engine.py`** -- Thêm `stream_answer()` async generator yield SSE events (`event: metadata`, `data: ...`, `event: done`).
+- **`search/generator.py`** -- `generate_stream()` yield từng token. `generate_with_fallback_stream()` tự động fallback khi primary generator fail.
+- **`chat/page.tsx`** -- RAG action dùng `fetch` + `ReadableStream` nhận token real-time, cập nhật message dần.
+- Test:
+  ```bash
+  curl -N -X POST http://localhost:8000/chat/stream \
+    -H "Content-Type: application/json" \
+    -d '{"query":"test"}'
+  ```
+
+### CloudWatch Monitoring
+- **`app/monitoring.py`** -- Custom metrics (SearchDuration, SearchQueryLength, SearchHitCount) gửi lên CloudWatch namespace `NewsRAG`. Background thread flush 30s/lần.
+- **`scripts/deploy-monitoring.sh`** -- Script deploy:
+  - Dashboard `NewsRAG-Overview` (4 widgets: API latency, Search QPS, DB connections, ECS CPU/Memory)
+  - Alarms: RDS CPU > 80%, 5xx errors > 10/min
+  - Log metric filters (SearchDuration, ErrorCount)
+- Metrics được ghi tự động mỗi khi `/search` được gọi.
+
+### CI/CD (GitHub Actions)
+- **`.github/workflows/deploy.yml`** -- Deploy infra (main) / plan dry-run (PR). Gọi các script `scripts/deploy-*.sh` theo thứ tự.
+- **`.github/workflows/deploy-backend.yml`** -- Push Docker image lên ECR + force redeploy ECS service. Trigger bởi changes trong `app/`, `search/`, `utils/`, `Dockerfile`.
+- **`.github/workflows/deploy-frontend.yml`** -- Build Next.js → S3 sync → CloudFront invalidation. Trigger bởi changes trong `frontend/`.
+- Secrets required: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ACCOUNT_ID`, `DB_PASSWORD`, `API_GATEWAY_URL`.
+
+### Makefile
+```bash
+make setup    # First-time: venv + deps
+make backend  # Start FastAPI (port 8000)
+make frontend # Start Next.js (port 3000)
+make crawl    # Crawl news articles
+make migrate  # Migrate articles.json → RDS star-schema
+```

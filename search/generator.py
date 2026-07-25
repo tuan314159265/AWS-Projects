@@ -97,6 +97,25 @@ class BaseGenerator(ABC):
             logger.error(f"Generate error ({self._config.name}): {e}")
             raise
 
+    def generate_stream(self, query: str, search_hits: List[SearchHit]):
+        """
+        Stream answer token by token.
+        Yields tuples: (token, done_flag)
+        """
+        try:
+            if not search_hits:
+                yield ("Không tìm thấy nguồn tin nào liên quan.", True)
+                return
+
+            context = self._format_context(search_hits)
+            for chunk in self._chain.stream({"context": context, "question": query}):
+                if chunk:
+                    yield (chunk, False)
+            yield ("", True)
+        except Exception as e:
+            logger.error(f"Generate stream error ({self._config.name}): {e}")
+            yield (f"Lỗi: {e}", True)
+
     def cleanup(self):
         """Release resources associated with the generator."""
         self._llm = None
@@ -253,6 +272,41 @@ class GeneratorRegistry:
                 continue
 
         return "Xin lỗi, hệ thống hiện đang gặp sự cố. Vui lòng thử lại sau."
+
+    def generate_with_fallback_stream(self, query: str, search_hits: List[SearchHit],
+                                       identifier: str = 'default'):
+        """Stream from primary generator with fallback."""
+        if not search_hits:
+            yield "Không tìm thấy nguồn tin nào liên quan."
+            return
+
+        primary_name = None
+        try:
+            primary_name = self._resolve_name(identifier)
+            gen = self._generators[primary_name]
+            for token, done in gen.generate_stream(query, search_hits):
+                if done:
+                    return
+                yield token
+            return
+        except Exception as e:
+            logger.error(f"[GENERATOR] Stream error with '{primary_name}': {e}")
+
+        for fallback_name in self._generators:
+            if fallback_name == primary_name:
+                continue
+            try:
+                gen = self._generators[fallback_name]
+                for token, done in gen.generate_stream(query, search_hits):
+                    if done:
+                        return
+                    yield token
+                return
+            except Exception as e:
+                logger.error(f"[GENERATOR] Fallback stream error '{fallback_name}': {e}")
+                continue
+
+        yield "Xin lỗi, hệ thống đang gặp sự cố."
 
     def list_generators(self) -> List[Dict[str, str]]:
         results = []

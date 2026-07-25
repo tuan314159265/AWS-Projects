@@ -1,13 +1,14 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { 
-  Search, 
-  ChevronDown, 
-  FileText, 
+import {
+  Search,
+  ChevronDown,
+  FileText,
   X,
   Loader2,
   Newspaper
 } from 'lucide-react';
+import { api, ApiError } from '../../../lib/api';
 
 const formatDate = (dateString: string) => {
   if (!dateString || dateString === 'N/A') return 'N/A';
@@ -31,35 +32,23 @@ export default function SearchPage() {
   const [results, setResults] = useState<any[]>([]);       
   const [isLoading, setIsLoading] = useState(false);       
 
-  // --- HÀM GỌI API THUẦN POSTGRESQL ---
   const fetchResults = async () => {
     setIsLoading(true);
-    
     try {
-      // Gắn query và limit thẳng vào URL API
-      const searchParam = query.trim() ? `&q=${encodeURIComponent(query)}` : '';
-      const res = await fetch(`/articles?limit=50${searchParam}`); 
-      
-      if (!res.ok) throw new Error("Lỗi kết nối API PostgreSQL");
-      
-      const data = await res.json();
-      
-      const mappedResults = data.map((item: any) => {
-        return {
-          id: item.id,
-          title: item.title,
-          source: item.source || 'Unknown',  // Lấy thẳng domain từ dim_source
-          date: item.published_date || 'N/A', // Lấy ngày chuẩn từ dim_time
-          author: item.author || 'Tác giả',   // Lấy tên thật từ dim_author
-          snippet: item.snippet || 'Không có tóm tắt...', // Lấy 150 chữ từ dim_content
-          url: item.url || '#'
-        };
-      });
-      
+      const data = await api.articles(query, 50, 0);
+      const mappedResults = data.map((item: any) => ({
+        id: item.id,
+        title: item.title,
+        source: item.source || 'Unknown',
+        date: item.published_date || 'N/A',
+        author: item.author || 'Tác giả',
+        snippet: item.snippet || 'Không có tóm tắt...',
+        url: item.url || '#'
+      }));
       setRawResults(mappedResults);
     } catch (error) {
       console.error("Lỗi khi fetch data:", error);
-      alert("Không thể kết nối Backend. Chắc chắn FastAPI đang chạy ở port 8000 nhé!");
+      alert("Không thể kết nối Backend.");
       setRawResults([]);
     } finally {
       setIsLoading(false);

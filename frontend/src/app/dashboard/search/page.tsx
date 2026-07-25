@@ -38,7 +38,8 @@ export default function SearchPage() {
     try {
       // Gắn query và limit thẳng vào URL API
       const searchParam = query.trim() ? `&q=${encodeURIComponent(query)}` : '';
-      const res = await fetch(`/articles?limit=50${searchParam}`); 
+      const endpoint = query.trim() ? `/api/search?limit=${topK}${searchParam}` : `/api/articles?limit=50`;
+      const res = await fetch(endpoint); 
       
       if (!res.ok) throw new Error("Lỗi kết nối API PostgreSQL");
       
@@ -59,7 +60,7 @@ export default function SearchPage() {
       setRawResults(mappedResults);
     } catch (error) {
       console.error("Lỗi khi fetch data:", error);
-      alert("Không thể kết nối Backend. Chắc chắn FastAPI đang chạy ở port 8000 nhé!");
+      alert("Không thể kết nối Backend API. Vui lòng kiểm tra lại log hệ thống.");
       setRawResults([]);
     } finally {
       setIsLoading(false);

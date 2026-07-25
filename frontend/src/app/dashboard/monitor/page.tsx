@@ -7,9 +7,13 @@ export default function PipelineMonitor() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const res = await fetch('/pipeline/status');
-      const json = await res.json();
-      setData(json);
+      try {
+        const res = await fetch('/api/pipeline/status');
+        const json = await res.json();
+        setData(json);
+      } catch (err) {
+        console.error("Lỗi tải status:", err);
+      }
     };
     fetchData();
     const interval = setInterval(fetchData, 5000); // Cập nhật mỗi 5 giây
@@ -81,17 +85,22 @@ export default function PipelineMonitor() {
       </div>
 
       {/* Log Console giả lập */}
-      <div className="bg-slate-900 rounded-xl p-4 font-mono text-xs text-emerald-400 shadow-2xl">
-        <div className="flex items-center gap-2 mb-2 border-b border-slate-800 pb-2 text-slate-500">
-          <div className="w-3 h-3 rounded-full bg-red-500"></div>
-          <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-          <div className="w-3 h-3 rounded-full bg-green-500"></div>
-          <span className="ml-2">system_logs.sh</span>
+      <div className="bg-slate-900 rounded-xl p-4 font-mono text-xs text-emerald-400 shadow-2xl relative">
+        <div className="flex items-center gap-2 mb-2 border-b border-slate-800 pb-2 text-slate-500 justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-red-500"></div>
+            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            <span className="ml-2">system_logs.sh</span>
+          </div>
+          <a href="https://ap-southeast-2.console.aws.amazon.com/cloudwatch/home?region=ap-southeast-2#dashboards/dashboard/NewsRAG-Monitor" target="_blank" rel="noreferrer" className="text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-sans font-bold uppercase tracking-wider text-[10px] bg-indigo-500/20 px-3 py-1 rounded-full border border-indigo-500/30 transition-all">
+            Xem trên CloudWatch
+          </a>
         </div>
-        <div className="space-y-1">
-          <p>[{data.stats.last_run}] INFO: Kafka consumer received 12 messages from 'raw_news_topic'</p>
-          <p>[{data.stats.last_run}] INFO: ETL job completed. 10 articles written to fact_articles.</p>
-          <p className="text-indigo-400">[{data.stats.last_run}] SUCCESS: Vectorized 10 chunks to Qdrant collection 'news_chunks'</p>
+        <div className="space-y-1 mt-3">
+          <p>[{data.stats.last_run}] INFO: SQS consumer received {data.stats.total_processed || 12} messages from SQS queue</p>
+          <p>[{data.stats.last_run}] INFO: ETL job completed. {data.stats.total_processed || 10} articles written to fact_articles.</p>
+          <p className="text-indigo-400">[{data.stats.last_run}] SUCCESS: Vectorized chunks to pgvector database</p>
           <p className="animate-pulse">_</p>
         </div>
       </div>

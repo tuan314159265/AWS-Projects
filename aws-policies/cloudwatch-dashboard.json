@@ -1,0 +1,174 @@
+{
+  "widgets": [
+    {
+      "type": "text",
+      "x": 0, "y": 0, "width": 24, "height": 1,
+      "properties": {
+        "markdown": "# NewsRAG Monitoring Dashboard\n*Real-time monitoring for Lambda, RDS Aurora, SQS, and ECS Pipeline*"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0, "y": 1, "width": 8, "height": 6,
+      "properties": {
+        "title": "Lambda RAG - Invocations and Errors",
+        "metrics": [
+          ["AWS/Lambda", "Invocations", "FunctionName", "newsrag-rag-api", {"stat": "Sum", "color": "#2563eb"}],
+          ["AWS/Lambda", "Errors", "FunctionName", "newsrag-rag-api", {"stat": "Sum", "color": "#dc2626"}],
+          ["AWS/Lambda", "Throttles", "FunctionName", "newsrag-rag-api", {"stat": "Sum", "color": "#f59e0b"}]
+        ],
+        "view": "timeSeries",
+        "region": "ap-southeast-2",
+        "period": 300,
+        "stacked": false
+      }
+    },
+    {
+      "type": "metric",
+      "x": 8, "y": 1, "width": 8, "height": 6,
+      "properties": {
+        "title": "Lambda ETL - Invocations and Errors",
+        "metrics": [
+          ["AWS/Lambda", "Invocations", "FunctionName", "newsrag-etl", {"stat": "Sum", "color": "#2563eb"}],
+          ["AWS/Lambda", "Errors", "FunctionName", "newsrag-etl", {"stat": "Sum", "color": "#dc2626"}],
+          ["AWS/Lambda", "Throttles", "FunctionName", "newsrag-etl", {"stat": "Sum", "color": "#f59e0b"}]
+        ],
+        "view": "timeSeries",
+        "region": "ap-southeast-2",
+        "period": 300,
+        "stacked": false
+      }
+    },
+    {
+      "type": "metric",
+      "x": 16, "y": 1, "width": 8, "height": 6,
+      "properties": {
+        "title": "Lambda Duration (ms)",
+        "metrics": [
+          ["AWS/Lambda", "Duration", "FunctionName", "newsrag-rag-api", {"stat": "Average", "color": "#2563eb", "label": "RAG Avg"}],
+          ["AWS/Lambda", "Duration", "FunctionName", "newsrag-rag-api", {"stat": "p99", "color": "#dc2626", "label": "RAG p99"}],
+          ["AWS/Lambda", "Duration", "FunctionName", "newsrag-etl", {"stat": "Average", "color": "#16a34a", "label": "ETL Avg"}]
+        ],
+        "view": "timeSeries",
+        "region": "ap-southeast-2",
+        "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0, "y": 7, "width": 8, "height": 6,
+      "properties": {
+        "title": "RDS Aurora - CPU Utilization",
+        "metrics": [
+          ["AWS/RDS", "CPUUtilization", "DBClusterIdentifier", "newsrag-postgres", {"stat": "Average", "color": "#2563eb"}]
+        ],
+        "view": "timeSeries",
+        "region": "ap-southeast-2",
+        "period": 300,
+        "annotations": {
+          "horizontal": [{"label": "Warning 80 percent", "value": 80, "color": "#dc2626"}]
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 8, "y": 7, "width": 8, "height": 6,
+      "properties": {
+        "title": "RDS Aurora - Connections and Memory",
+        "metrics": [
+          ["AWS/RDS", "DatabaseConnections", "DBClusterIdentifier", "newsrag-postgres", {"stat": "Average", "color": "#8b5cf6"}],
+          ["AWS/RDS", "FreeableMemory", "DBClusterIdentifier", "newsrag-postgres", {"stat": "Average", "color": "#16a34a", "yAxis": "right"}]
+        ],
+        "view": "timeSeries",
+        "region": "ap-southeast-2",
+        "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "x": 16, "y": 7, "width": 8, "height": 6,
+      "properties": {
+        "title": "RDS Aurora - Read Write Latency",
+        "metrics": [
+          ["AWS/RDS", "ReadLatency", "DBClusterIdentifier", "newsrag-postgres", {"stat": "Average", "color": "#2563eb", "label": "Read Latency"}],
+          ["AWS/RDS", "WriteLatency", "DBClusterIdentifier", "newsrag-postgres", {"stat": "Average", "color": "#dc2626", "label": "Write Latency"}]
+        ],
+        "view": "timeSeries",
+        "region": "ap-southeast-2",
+        "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0, "y": 13, "width": 8, "height": 6,
+      "properties": {
+        "title": "SQS - Messages Sent and Received",
+        "metrics": [
+          ["AWS/SQS", "NumberOfMessagesSent", "QueueName", "newsrag-raw-news", {"stat": "Sum", "color": "#2563eb"}],
+          ["AWS/SQS", "NumberOfMessagesReceived", "QueueName", "newsrag-raw-news", {"stat": "Sum", "color": "#16a34a"}],
+          ["AWS/SQS", "NumberOfMessagesDeleted", "QueueName", "newsrag-raw-news", {"stat": "Sum", "color": "#6b7280"}]
+        ],
+        "view": "timeSeries",
+        "region": "ap-southeast-2",
+        "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "x": 8, "y": 13, "width": 8, "height": 6,
+      "properties": {
+        "title": "SQS DLQ - Dead Letter Queue Depth",
+        "metrics": [
+          ["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", "newsrag-raw-news-dlq", {"stat": "Sum", "color": "#dc2626", "label": "DLQ Messages"}],
+          ["AWS/SQS", "ApproximateAgeOfOldestMessage", "QueueName", "newsrag-raw-news-dlq", {"stat": "Maximum", "color": "#f59e0b", "label": "Oldest Message Age", "yAxis": "right"}]
+        ],
+        "view": "timeSeries",
+        "region": "ap-southeast-2",
+        "period": 300,
+        "annotations": {
+          "horizontal": [{"label": "Alert Messages in DLQ", "value": 1, "color": "#dc2626"}]
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 16, "y": 13, "width": 8, "height": 6,
+      "properties": {
+        "title": "Pipeline Custom Metrics",
+        "metrics": [
+          ["NewsRAG/Pipeline", "PipelineSuccessCount", {"stat": "Sum", "color": "#16a34a", "label": "Success"}],
+          ["NewsRAG/Pipeline", "PipelineErrorCount", {"stat": "Sum", "color": "#dc2626", "label": "Errors"}]
+        ],
+        "view": "timeSeries",
+        "region": "ap-southeast-2",
+        "period": 300
+      }
+    },
+    {
+      "type": "alarm",
+      "x": 0, "y": 19, "width": 24, "height": 3,
+      "properties": {
+        "title": "Alarm Status Overview",
+        "alarms": [
+          "arn:aws:cloudwatch:ap-southeast-2:814808959551:alarm:newsrag-lambda-rag-errors",
+          "arn:aws:cloudwatch:ap-southeast-2:814808959551:alarm:newsrag-lambda-etl-errors",
+          "arn:aws:cloudwatch:ap-southeast-2:814808959551:alarm:newsrag-lambda-rag-duration",
+          "arn:aws:cloudwatch:ap-southeast-2:814808959551:alarm:newsrag-rds-cpu-high",
+          "arn:aws:cloudwatch:ap-southeast-2:814808959551:alarm:newsrag-rds-connections-high",
+          "arn:aws:cloudwatch:ap-southeast-2:814808959551:alarm:newsrag-sqs-dlq-not-empty",
+          "arn:aws:cloudwatch:ap-southeast-2:814808959551:alarm:newsrag-pipeline-errors"
+        ]
+      }
+    },
+    {
+      "type": "log",
+      "x": 0, "y": 22, "width": 24, "height": 6,
+      "properties": {
+        "title": "Recent Pipeline Logs",
+        "query": "SOURCE '/ecs/newsrag-crawler' | SOURCE '/aws/lambda/newsrag-rag-api' | SOURCE '/aws/lambda/newsrag-etl' | fields @timestamp, @message | sort @timestamp desc | limit 50",
+        "region": "ap-southeast-2",
+        "view": "table"
+      }
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+# Dockerfile.lambda
+FROM public.ecr.aws/lambda/python:3.12
+
+# Install system dependencies
+RUN dnf install -y gcc postgresql-devel
+
+# Copy requirements and install
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY . ${LAMBDA_TASK_ROOT}/
+
+# Set Python path
+ENV PYTHONPATH=${LAMBDA_TASK_ROOT}
+
+# Default handler (override per function)
+CMD ["lambda_handlers.etl_handler.handler"]

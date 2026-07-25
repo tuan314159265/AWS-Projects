@@ -29,7 +29,7 @@ export default function DashboardPage() {
   const fetchStats = async () => {
     setIsRefreshing(true);
     try {
-      const res = await fetch('/stats');
+      const res = await fetch('/api/stats');
       if (res.ok) {
         const data = await res.json();
         setStats({

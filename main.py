@@ -5,7 +5,7 @@ import time
 import argparse
 import schedule
 
-import consumer.consumer as consumer_module
+
 from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
 from crawler.spiders.spider import NewsRAGSpider
@@ -23,12 +23,6 @@ def run_spider(site_url):
     process.start()
 
 
-def run_consumer():
-    """Chạy Kafka consumer trong process riêng."""
-    print("[Consumer] Đang khởi tạo kết nối...")
-    time.sleep(2)
-    consumer_module.start_processing()
-
 
 def do_crawl_stage():
     """Cào tin tức từ các báo và lưu qua Kafka -> PostgreSQL."""
@@ -45,12 +39,6 @@ def do_crawl_stage():
     p_cons = None
 
     try:
-        # 1. Khởi chạy Consumer trước
-        p_cons = multiprocessing.Process(target=run_consumer, name="Consumer-Process")
-        p_cons.start()
-        all_processes.append(p_cons)
-        time.sleep(5)
-
         # 2. Chạy Spiders song song
         print(f"Bắt đầu {len(urls)} Spiders (thời gian chạy: 10 phút)...")
         spider_processes = []
@@ -66,10 +54,7 @@ def do_crawl_stage():
 
         time.sleep(20)
 
-        # 4. Dừng Consumer
-        if p_cons and p_cons.is_alive():
-            p_cons.terminate()
-            p_cons.join()
+
 
     except KeyboardInterrupt:
         for p in all_processes:
@@ -81,8 +66,8 @@ def do_crawl_stage():
 def do_balance_etl_and_vectorize():
     """Chạy luân phiên ETL và Vectorize để cân bằng bộ nhớ."""
     while True:
-        etl_count = run_etl_warehouse(limit=50)
-        vec_count = run_vectorization(limit=256)
+        etl_count = run_etl_warehouse(limit=4000)
+        vec_count = run_vectorization(batch_size=4000)
 
         if etl_count == 0 and vec_count == 0:
             print("[HOÀN TẤT] Pipeline đã xử lý xong toàn bộ dữ liệu.")
@@ -111,7 +96,7 @@ if __name__ == "__main__":
     elif args.mode == 'etl':
         run_etl_warehouse(limit=None)
     elif args.mode == 'vectorize':
-        run_vectorization(limit=None)
+        run_vectorization(batch_size=None)
     elif args.mode == 'full':
         run_full_pipeline()
     elif args.mode == 'auto':

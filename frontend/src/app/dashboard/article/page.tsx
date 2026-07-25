@@ -28,6 +28,7 @@ export default function ArticleExplorerPage() {
   const [limit] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
+  const [source, setSource] = useState('All Sources');
 
   // State cho Vector Chunks
   const [expandedRow, setExpandedRow] = useState<string | number | null>(null);
@@ -40,7 +41,10 @@ export default function ArticleExplorerPage() {
     setExpandedRow(null); // Đóng chunk view khi đổi trang
     try {
       const offset = (page - 1) * limit;
-      const res = await fetch(`/articles?q=${searchQuery}&limit=${limit}&offset=${offset}`);
+      let url = `/api/articles?limit=${limit}&offset=${offset}`;
+      if (searchQuery.trim()) url += `&q=${encodeURIComponent(searchQuery)}`;
+      if (source !== 'All Sources') url += `&source=${encodeURIComponent(source)}`;
+      const res = await fetch(url);
       
       if (res.ok) {
         const data = await res.json();
@@ -63,7 +67,7 @@ export default function ArticleExplorerPage() {
   useEffect(() => {
     fetchArticles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
+  }, [page, source]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +85,7 @@ export default function ArticleExplorerPage() {
     setExpandedRow(articleId);
     setIsLoadingChunks(true);
     try {
-      const res = await fetch(`/articles/${articleId}/chunks`);
+      const res = await fetch(`/api/articles/${articleId}/chunks`);
       const data = await res.json();
       setChunksData(data.chunks || []);
     } catch (error) {
@@ -110,7 +114,7 @@ export default function ArticleExplorerPage() {
             DATA EXPLORER & VECTOR MANAGER
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Duyệt dữ liệu thô và kiểm tra thuật toán Chunking trước khi đưa vào Qdrant.
+            Duyệt dữ liệu thô và kiểm tra thuật toán Chunking trước khi đưa vào pgvector.
           </p>
         </div>
         
@@ -139,9 +143,21 @@ export default function ArticleExplorerPage() {
         </form>
 
         <div className="flex gap-2 w-full md:w-auto">
-          <button className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors">
-            <Filter size={16} /> Lọc nâng cao
-          </button>
+          <select 
+            value={source}
+            onChange={(e) => {
+              setSource(e.target.value);
+              setPage(1);
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors outline-none cursor-pointer"
+          >
+            <option value="All Sources">Tất cả nguồn (Lọc nâng cao)</option>
+            <option value="vnexpress.net">vnexpress.net</option>
+            <option value="dantri.com.vn">dantri.com.vn</option>
+            <option value="vietnamnet.vn">vietnamnet.vn</option>
+            <option value="cafef.vn">cafef.vn</option>
+            <option value="vneconomy.vn">vneconomy.vn</option>
+          </select>
         </div>
       </div>
 

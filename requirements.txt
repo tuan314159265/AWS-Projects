@@ -17,4 +17,4 @@ pgvector
 sqlalchemy
 langchain_aws
 colorlog
-
+botocore[crt]

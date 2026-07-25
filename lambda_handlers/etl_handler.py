@@ -10,10 +10,10 @@ def handler(event, context):
     """Lambda entry point."""
     try:
         # Bước 1: ETL - Clean + Chunk + Insert warehouse
-        etl_count = run_etl_warehouse(limit=50)
+        etl_count = run_etl_warehouse(limit=4000)
         
         # Bước 2: Vectorize - Embed + Insert pgvector
-        vec_count = run_vectorization(batch_size=500)
+        vec_count = run_vectorization(batch_size=4000)
         
         result = {
             "statusCode": 200,

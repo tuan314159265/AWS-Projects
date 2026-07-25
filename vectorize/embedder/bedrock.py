@@ -78,9 +78,7 @@ class BedrockEmbedder(BaseEmbedder):
             return BedrockEmbeddings(
                 model_id=self._embed_config.model_id,
                 client=self._client,
-                region_name=self._bedrock_config.region,
-                dimensions=self._embed_config.dimension,
-                normalize=True,
+                region_name=self._bedrock_config.region
             )
         except Exception as e:
             logger.exception(f"[EMBEDDING] Failed to initialize Bedrock embedding model: {e}")

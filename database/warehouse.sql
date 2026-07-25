@@ -31,7 +31,8 @@ CREATE TABLE IF NOT EXISTS fact_articles (
     source_id INT REFERENCES dim_source(source_id),
     time_id INT REFERENCES dim_time(time_id),
     content_id INT REFERENCES dim_content(content_id),
-    content_length INT
+    content_length INT,
+    url TEXT
 );
 
 CREATE TABLE IF NOT EXISTS fact_article_authors (

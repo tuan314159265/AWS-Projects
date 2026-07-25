@@ -21,7 +21,12 @@ import colorlog
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # Log directory
-LOG_DIR = PROJECT_ROOT / "logs"
+import os
+if os.environ.get("LAMBDA_TASK_ROOT"):
+    LOG_DIR = Path("/tmp/logs")
+else:
+    LOG_DIR = PROJECT_ROOT / "logs"
+
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 # Default log file

@@ -107,7 +107,13 @@ class VectorStoreConfig(BaseSettings):
         default="qdrant",
     )
 
-    host: str = Field(alias="VECTOR_HOST")
+    host: str | None = Field(alias="VECTOR_HOST", default=None)
+
+    @model_validator(mode="after")
+    def fallback_host(self) -> "VectorStoreConfig":
+        if self.provider == "pgvector" and not self.host:
+            self.host = os.getenv("DB_HOST", "localhost")
+        return self
 
     port: int = Field(alias="VECTOR_PORT", default=6333)
 
@@ -237,12 +243,12 @@ class EmbeddingConfig(BaseSettings):
     )
 
     model_id: str = Field(
-        alias="EMBEDDING_MODEL_ID",
+        alias="BEDROCK_EMBEDDING_MODEL_ID",
         default="amazon.titan-embed-text-v2:0",
     )
 
     dimension: int = Field(
-        alias="EMBEDDING_DIMENSION",
+        alias="BEDROCK_EMBEDDING_DIMENSION",
         default=1024,
     )
 

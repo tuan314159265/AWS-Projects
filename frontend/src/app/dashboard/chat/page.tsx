@@ -234,7 +234,7 @@ export default function ChatPage() {
         <div className="w-full">
           <div className="flex items-center gap-2 mb-4 text-slate-700 font-bold border-b pb-2">
             <Database size={18} className="text-slate-500"/>
-            <span>Kết quả Qdrant ({msg.sourcesCount})</span>
+            <span>Kết quả pgvector ({msg.sourcesCount})</span>
           </div>
           <div className="space-y-3">
             {msg.retrieveResults?.map((hit, i) => (
@@ -403,7 +403,7 @@ export default function ChatPage() {
               <div className="bg-white border border-slate-200 rounded-2xl rounded-tl-sm px-5 py-4 shadow-sm flex items-center gap-3">
                 <Loader2 size={18} className="text-indigo-500 animate-spin" />
                 <span className="text-sm text-slate-500 font-medium">
-                  {actionType === 'retrieve' ? 'Đang lục lọi trong Qdrant...' : 
+                  {actionType === 'retrieve' ? 'Đang lục lọi trong pgvector...' : 
                    actionType === 'compare' ? 'Đang yêu cầu các Models phản hồi...' : 
                    'Đang đọc tài liệu và suy nghĩ...'}
                 </span>
@@ -442,7 +442,7 @@ export default function ChatPage() {
                 disabled={!input.trim() || isLoading}
                 className="bg-slate-700 hover:bg-slate-800 disabled:bg-slate-300 text-white py-2 px-4 rounded-lg transition-colors flex items-center gap-2 text-sm font-semibold shadow-sm"
               >
-                <Search size={16} /> Tìm Qdrant
+                <Search size={16} /> Tìm kiếm (pgvector)
               </button>
 
               <button 

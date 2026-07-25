@@ -1,0 +1,33 @@
+{
+  "family": "newsrag-crawler",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::814808959551:role/newsrag-ecs-execution-role",
+  "taskRoleArn": "arn:aws:iam::814808959551:role/newsrag-ecs-task-role",
+  "containerDefinitions": [
+    {
+      "name": "crawler",
+      "image": "814808959551.dkr.ecr.ap-southeast-2.amazonaws.com/newsrag-crawler:latest",
+      "command": ["python", "main.py", "--mode", "crawl"],
+      "environment": [
+        {"name": "SQS_QUEUE_URL", "value": "https://sqs.ap-southeast-2.amazonaws.com/814808959551/newsrag-raw-news"},
+        {"name": "AWS_REGION", "value": "ap-southeast-2"},
+        {"name": "DB_HOST", "value": "newsrag-instance-1.cn8uwuau2s7x.ap-southeast-2.rds.amazonaws.com"},
+        {"name": "DB_PORT", "value": "5432"},
+        {"name": "DB_NAME", "value": "postgres"},
+        {"name": "DB_USER", "value": "newsrag_admin"},
+        {"name": "DB_PASSWORD", "value": "newsrag_admin"}
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/newsrag-crawler",
+          "awslogs-region": "ap-southeast-2",
+          "awslogs-stream-prefix": "crawler"
+        }
+      }
+    }
+  ]
+}

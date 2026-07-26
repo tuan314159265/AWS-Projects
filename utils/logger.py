@@ -15,8 +15,6 @@ import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-import colorlog
-
 # Project root
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -104,4 +102,5 @@ def get_logger(name: str) -> logging.Logger:
     -------
     logging.Logger
     """
+    setup_logging()
     return logging.getLogger(name)

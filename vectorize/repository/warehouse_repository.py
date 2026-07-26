@@ -119,7 +119,7 @@ class WarehouseRepository:
         """
         
         if filter_article_id:
-            sql += "\nWHERE c.article_id = %s\n"
+            sql += "\nAND c.article_id = %s\n"
             
         sql += """
             GROUP BY c.article_id, c.chunk_index, c.content, a.title, a.url, t.date
@@ -165,5 +165,4 @@ class WarehouseRepository:
             authors=row["authors"],
             publish_timestamp=timestamp,
         )
-    
     

@@ -34,7 +34,6 @@ class BedrockEmbedder(BaseEmbedder):
     def __init__(self) -> None:
         """Initialize the Bedrock client and model configuration."""
         self._embed_config = settings.embedding
-        self._bedrock_config = settings.bedrock
         self._bedrock_credentials = settings.aws_config.profiles.get("bedrock", settings.aws_config.profiles.get("default"))
         
         self._client = self._create_client()
@@ -44,9 +43,14 @@ class BedrockEmbedder(BaseEmbedder):
         """
         Create and return the boto3 Bedrock Runtime client.
         """
+        region = (
+            self._bedrock_credentials.region
+            if self._bedrock_credentials
+            else settings.bedrock.region
+        )
         client_kwargs: dict[str, Any] = {
             "service_name": "bedrock-runtime",
-            "region_name": self._bedrock_config.region,
+            "region_name": region,
             "config": Config(retries={"max_attempts": self.MAX_RETRIES}),
         }
 
@@ -78,7 +82,13 @@ class BedrockEmbedder(BaseEmbedder):
             return BedrockEmbeddings(
                 model_id=self._embed_config.model_id,
                 client=self._client,
-                region_name=self._bedrock_config.region
+                region_name=(
+                    self._bedrock_credentials.region
+                    if self._bedrock_credentials
+                    else settings.bedrock.region
+                ),
+                dimensions=self._embed_config.dimension,
+                normalize=True,
             )
         except Exception as e:
             logger.exception(f"[EMBEDDING] Failed to initialize Bedrock embedding model: {e}")
@@ -110,8 +120,11 @@ class BedrockEmbedder(BaseEmbedder):
 
             return chunks
         except Exception as e:
-                    logger.exception(f"[EMBEDDING] Failed to generate embeddings due to an error: {e}")
-                    raise RuntimeError("Embedding generation failed.")
+            logger.exception(
+                "[EMBEDDING] Failed to generate embeddings due to an error: %s",
+                e,
+            )
+            raise RuntimeError("Embedding generation failed.") from e
 
     def embed_query(self, query: str) -> list[float]:
         """

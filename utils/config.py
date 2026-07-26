@@ -243,12 +243,12 @@ class EmbeddingConfig(BaseSettings):
     )
 
     model_id: str = Field(
-        alias="BEDROCK_EMBEDDING_MODEL_ID",
+        alias="EMBEDDING_MODEL_ID",
         default="amazon.titan-embed-text-v2:0",
     )
 
     dimension: int = Field(
-        alias="BEDROCK_EMBEDDING_DIMENSION",
+        alias="EMBEDDING_DIMENSION",
         default=1024,
     )
 

@@ -1,6 +1,4 @@
-"use client";
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Search, MessageSquare, 
   Newspaper, Activity, Settings, 
@@ -9,10 +7,10 @@ import {
 
 const MENU_ITEMS = [
   { name: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
-  { name: 'Semantic Search', icon: Search, href: '/dashboard/search' },
-  { name: 'AI Chat', icon: MessageSquare, href: '/dashboard/chat' },
-  { name: 'Article Explorer', icon: Newspaper, href: '/dashboard/article' },
-  { name: 'Pipeline Monitor', icon: Activity, href: '/dashboard/monitor' },
+  { name: 'Semantic Search', icon: Search, href: '/search' },
+  { name: 'AI Chat', icon: MessageSquare, href: '/chat' },
+  { name: 'Article Explorer', icon: Newspaper, href: '/article' },
+  { name: 'Pipeline Monitor', icon: Activity, href: '/monitor' },
 ];
 
 interface SidebarProps {
@@ -20,7 +18,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ role }: SidebarProps) {
-  const pathname = usePathname();
+  const { pathname } = useLocation();
 
   return (
     <div className="w-64 bg-[#0f172a] h-full flex flex-col p-4 border-r border-slate-800 font-sans">
@@ -37,9 +35,9 @@ export default function Sidebar({ role }: SidebarProps) {
         {MENU_ITEMS.map((item) => {
           const isActive = pathname === item.href || (item.href === '/dashboard' && pathname === '/');
           return (
-            <Link 
-              key={item.href} 
-              href={item.href} 
+            <Link
+              key={item.href}
+              to={item.href}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
                 isActive 
                   ? 'bg-[#3730a3] text-white shadow-md' // Màu tím đậm của item active

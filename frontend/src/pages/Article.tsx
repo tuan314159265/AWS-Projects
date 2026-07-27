@@ -1,4 +1,4 @@
-"use client";
+
 import React, { useState, useEffect } from 'react';
 import { 
   Table as TableIcon, Filter, Search, ExternalLink, 
@@ -41,7 +41,7 @@ export default function ArticleExplorerPage() {
     setExpandedRow(null); // Đóng chunk view khi đổi trang
     try {
       const offset = (page - 1) * limit;
-      let url = `/api/articles?limit=${limit}&offset=${offset}`;
+      let url = `${import.meta.env.VITE_API_URL || ''}/articles?limit=${limit}&offset=${offset}`;
       if (searchQuery.trim()) url += `&q=${encodeURIComponent(searchQuery)}`;
       if (source !== 'All Sources') url += `&source=${encodeURIComponent(source)}`;
       const res = await fetch(url);
@@ -85,7 +85,7 @@ export default function ArticleExplorerPage() {
     setExpandedRow(articleId);
     setIsLoadingChunks(true);
     try {
-      const res = await fetch(`/api/articles/${articleId}/chunks`);
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/articles/${articleId}/chunks`);
       const data = await res.json();
       setChunksData(data.chunks || []);
     } catch (error) {

@@ -246,7 +246,7 @@ Tạo:
 ### Bước 3: Build và push Docker image
 
 ```bash
-./deploy.sh
+./scripts/deploy.sh
 ```
 
 Script tự động: `terraform apply` → ECR login → `docker build` → `docker tag` → `docker push`.

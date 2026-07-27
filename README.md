@@ -28,7 +28,8 @@ Dưới đây là cấu trúc thư mục chi tiết của dự án:
 │       └── spider.py             # Tin tức sitemap/link crawler sử dụng BeautifulSoup/Newspaper3k
 ├── database
 │   └── warehouse.sql             # SQL Schema định nghĩa cấu trúc dữ liệu Star Schema
-├── deploy.sh                     # Shell script tự động hóa đóng gói và triển khai Lambda
+├── scripts
+│   └── deploy.sh                     # Shell script tự động hóa đóng gói và triển khai Lambda
 ├── docker-compose.yml            # Khởi chạy Kafka, Zookeeper, PostgreSQL và Qdrant local
 ├── Dockerfile                    # Đóng gói crawler, etl, vectorize chạy trên ECS Fargate
 ├── Docs

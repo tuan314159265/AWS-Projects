@@ -1,4 +1,3 @@
-"use client";
 import React, { useState, useEffect } from 'react';
 import {
   Search,
@@ -8,7 +7,7 @@ import {
   Loader2,
   Newspaper
 } from 'lucide-react';
-import { api, ApiError } from '../../../lib/api';
+import { api, ApiError } from '../lib/api';
 
 const formatDate = (dateString: string) => {
   if (!dateString || dateString === 'N/A') return 'N/A';

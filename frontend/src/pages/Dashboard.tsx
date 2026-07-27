@@ -1,12 +1,11 @@
-"use client";
 import React, { useState, useEffect } from 'react';
 import {
   RefreshCw, FileText, Clock, Box,
   TrendingUp, PieChart as PieIcon, Users, Activity, Server, Database
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import StatCard from '../../components/StatCard';
-import { api, ApiError } from '../../lib/api';
+import StatCard from '../components/StatCard';
+import { api, ApiError } from '../lib/api';
 
 const COLORS = ['#3b82f6', '#10b981', '#ef4444', '#f59e0b', '#8b5cf6', '#06b6d4'];
 

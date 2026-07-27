@@ -58,6 +58,8 @@ class Retriever:
                 )
                 search_hits.append(hit)
 
+            return search_hits
+
         except Exception as e:
             logger.error(f"[RETRIEVER] Search failed: {e}")
             return []

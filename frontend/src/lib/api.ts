@@ -1,6 +1,6 @@
 import { Stats, Article, Source, ModelInfo, SearchResponse, SearchHit } from './types';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
+const BASE_URL = import.meta.env.VITE_API_URL || '';
 
 class ApiError extends Error {
   code: number;

@@ -1,7 +1,6 @@
-"use client";
 import React, { useEffect, useState } from 'react';
 import { Activity, Database, Server, Zap, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
-import { api } from '../../../lib/api';
+import { api } from '../lib/api';
 
 export default function PipelineMonitor() {
   const [data, setData] = useState<any>(null);

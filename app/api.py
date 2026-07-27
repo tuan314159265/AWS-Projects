@@ -21,6 +21,8 @@ from search.engine import Pipeline
 from search.generator import generator_registry
 from search.retriever import Retriever
 from .monitoring import put_search_metric, start_metrics_flusher
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -36,6 +38,8 @@ app.add_middleware(
 
 # Start CloudWatch metrics flusher
 start_metrics_flusher()
+
+FRONTEND_DIST = Path(__file__).parent.parent / "frontend" / "dist"
 
 # --- DATABASE CONNECTION ---
 def get_db_connection():
@@ -248,7 +252,7 @@ async def list_sources():
         conn.close()
 
 @app.get("/articles")
-async def list_articles(q: Optional[str] = None, limit: int = 10, offset: int = 0):
+async def list_articles(q: Optional[str] = None, source: Optional[str] = None, limit: int = 10, offset: int = 0):
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -258,7 +262,7 @@ async def list_articles(q: Optional[str] = None, limit: int = 10, offset: int = 
             SELECT
                 f.article_id AS id,
                 f.title,
-                m.url,
+                f.url,
                 s.domain AS source,
                 t.date AS published_date,
                 STRING_AGG(a.author_name, ' & ') AS author,
@@ -269,25 +273,26 @@ async def list_articles(q: Optional[str] = None, limit: int = 10, offset: int = 
             LEFT JOIN fact_article_authors faa ON f.article_id = faa.article_id
             LEFT JOIN dim_author a ON faa.author_id = a.author_id
             LEFT JOIN dim_content c ON f.content_id = c.content_id
-            LEFT JOIN article_metadata m ON f.url_hash = m.url_hash
         """
+        conditions = []
+        params = []
 
         if q and q.strip():
-            search_term = f"%{q.strip()}%"
-            query = base_query + """
-                WHERE f.title ILIKE %s
-                GROUP BY f.article_id, f.title, m.url, s.domain, t.date
-                ORDER BY t.date DESC
-                LIMIT %s OFFSET %s
-            """
-            cur.execute(query, (search_term, limit, offset))
-        else:
-            query = base_query + """
-                GROUP BY f.article_id, f.title, m.url, s.domain, t.date
-                ORDER BY t.date DESC
-                LIMIT %s OFFSET %s
-            """
-            cur.execute(query, (limit, offset))
+            conditions.append("f.title ILIKE %s")
+            params.append(f"%{q.strip()}%")
+
+        if source and source.strip() and source != 'All Sources':
+            conditions.append("s.domain = %s")
+            params.append(source.strip())
+
+        where_clause = "WHERE " + " AND ".join(conditions) + " " if conditions else ""
+        query = base_query + where_clause + """
+            GROUP BY f.article_id, f.title, f.url, s.domain, t.date
+            ORDER BY t.date DESC
+            LIMIT %s OFFSET %s
+        """
+        params.extend([limit, offset])
+        cur.execute(query, tuple(params))
 
         return cur.fetchall()
     finally:
@@ -305,7 +310,7 @@ async def get_stats():
         s_count = cur.fetchone()['count']
 
         # 2. Đếm tổng số bài báo
-        cur.execute("SELECT COUNT(*) as count FROM article_metadata")
+        cur.execute("SELECT COUNT(*) as count FROM fact_articles")
         a_count = cur.fetchone()['count']
 
         # 3. Đếm tổng số Vector
@@ -405,7 +410,7 @@ async def get_monitor_metrics():
             SELECT
                 (SELECT COUNT(*) FROM fact_articles) AS bai_bao,
                 (SELECT COUNT(*) FROM fact_chunks) AS tong_chunks,
-                (SELECT COUNT(*) FROM article_metadata WHERE publish_date = 'Unknown') AS loi_ngay
+                (SELECT COUNT(*) FROM fact_articles WHERE url IS NULL OR title IS NULL) AS loi_ngay
         """)
         data = cur.fetchone()
 
@@ -555,6 +560,12 @@ async def get_article_chunks_from_db(article_id: int):
     finally:
         cur.close()
         conn.close()
+
+# Serve frontend static files (production build)
+# Phải đặt CUỐI CÙNG để không override API routes
+FRONTEND_DIST = Path(__file__).parent.parent / "frontend" / "dist"
+if FRONTEND_DIST.exists():
+    app.mount("/", StaticFiles(directory=str(FRONTEND_DIST), html=True), name="frontend")
 
 if __name__ == "__main__":
     import uvicorn

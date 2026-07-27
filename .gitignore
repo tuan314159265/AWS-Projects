@@ -17,3 +17,4 @@ tests/
 PomodoroTracking/
 build/
 .env.local
+frontend/dist/

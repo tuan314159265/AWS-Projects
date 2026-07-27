@@ -8,9 +8,8 @@ AWS-Projects/
 ├── config/                                   # Cấu hình đầu vào
 │   └── config_site.json                      # [v1] Danh sách URL báo cần crawl (thanhnien, vnexpress, vietnamnet)
 │
-├── consumer/                                 # [v1] Kafka Consumer
-│   ├── __init__.py
-│   └── consumer.py                           # Đọc Kafka topic news_raw, SHA256 hash URL, insert vào article_metadata
+├── consumer/                                 # [REMOVED] v1 Kafka Consumer — đã xoá
+│   └── (chuyển sang AWS Lambda, xem CHANGELOG.md)
 │
 ├── crawler/                                  # [v1] Scrapy Crawler
 │   ├── __init__.py
@@ -52,7 +51,9 @@ AWS-Projects/
 │
 ├── .env.example                              # Mẫu biến môi trường (DB, Kafka, Qdrant, LLM keys)
 ├── .gitignore                                # Ignores venv, __pycache__, .env, terraform, model_cache
-├── deploy.sh                                 # Script deploy: terraform apply → docker build/push → ECR
+├── CHANGELOG.md                              # Nhật ký thay đổi qua các phiên bản
+├── scripts
+│   └── deploy.sh                             # Script deploy: terraform apply → docker build/push → ECR
 ├── docker-compose.yml                        # [v1] Local infra: Kafka (KRaft) + PostgreSQL 15
 ├── Dockerfile                                # Container image: python:3.10-slim, cài đặt dependencies
 ├── main.py                                   # Entrypoint CLI: --mode {crawl, etl, vectorize, full, auto}
@@ -73,8 +74,8 @@ Danh sách URL gốc cho crawler. Định dạng JSON array. Hiện tại gồm 
 - `https://vnexpress.net/`
 - `https://vietnamnet.vn/`
 
-### `consumer/consumer.py` `[v1]`
-Kafka Consumer độc lập. Đọc từ topic `news_raw`, decode JSON message, SHA256 hash URL để dedup, insert vào bảng `article_metadata` trong PostgreSQL. Xử lý reconnect khi mất kết nối.
+### `consumer/` `[REMOVED]`
+Kafka Consumer độc lập (v1) đã được loại bỏ khi migrate lên AWS Serverless v2. Chức năng consumer được chuyển lên Lambda. Lý do: bảng staging `article_metadata` gây trùng lặp dữ liệu với Star Schema, không cần thiết khi ETL ghi trực tiếp vào Star Schema. Chi tiết xem `CHANGELOG.md`.
 
 ### `crawler/spiders/spider.py` `[v1]`
 `NewsRAGSpider` kế thừa `scrapy.Spider` (không phải `SitemapSpider`). Đọc URL từ `config_site.json`, crawl link trong nội dung (depth limit = 5), parse bài viết bằng `newspaper3k`. Trích xuất tác giả qua CSS selector + regex, ngày xuất bản từ nhiều dạng meta tags.

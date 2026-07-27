@@ -1,10 +1,9 @@
-"use client";
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Send, Bot, User, Cpu, Sparkles, Loader2, Database, ChevronDown, Scale, Search
 } from 'lucide-react';
 import { marked } from 'marked';
-import { api, ApiError } from '../../../lib/api';
+import { api, ApiError } from '../lib/api';
 
 // --- MỞ RỘNG INTERFACE ĐỂ CHỨA NHIỀU LOẠI DATA ---
 interface Message {
@@ -87,7 +86,7 @@ export default function ChatPage() {
     // RAG type uses SSE streaming
     if (type === 'rag') {
       try {
-        const BASE = process.env.NEXT_PUBLIC_API_URL || '';
+        const BASE = import.meta.env.VITE_API_URL || '';
         const res = await fetch(`${BASE}/chat/stream`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

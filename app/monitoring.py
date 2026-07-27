@@ -18,7 +18,7 @@ _flush_interval = 30  # seconds
 def _get_client():
     global _client
     if _client is None:
-        _client = boto3.client("cloudwatch", region_name=settings.bedrock.region)
+        _client = boto3.client("cloudwatch", region_name="ap-southeast-2")
     return _client
 
 

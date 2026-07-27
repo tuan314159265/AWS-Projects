@@ -19,6 +19,17 @@ class NewsRAGSpider(scrapy.Spider):
         'DEPTH_LIMIT': 5,
         'ROBOTSTXT_OBEY': False,
         'LOG_LEVEL': 'INFO',
+        # 1. BẬT PIPELINE: Chuyển dữ liệu cào được sang SQSPipeline (hoặc DB Pipeline của bạn)
+        'ITEM_PIPELINES': {
+            'crawler.pipelines.SQSPipeline': 300, # Đảm bảo đường dẫn này khớp với tên file pipeline của bạn
+        },
+        
+        # 2. BẬT NGỤY TRANG: Tránh việc AWS Fargate bị tường lửa của báo chặn
+        'DEFAULT_REQUEST_HEADERS': {
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+            'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
+        },
+        
         'USER_AGENT': (
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
             if is_windows else
@@ -211,3 +222,4 @@ class NewsRAGSpider(scrapy.Spider):
             'author': author,
             'publish_date': publish_date
         }
+

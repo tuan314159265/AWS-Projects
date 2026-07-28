@@ -208,9 +208,9 @@ Mã nguồn Terraform trong dự án triển khai các tài nguyên AWS sau:
 - **`frontend/src/lib/api.ts`** -- Centralized API client với `useApi<T>()` hook pattern. Mỗi page không còn tự fetch trực tiếp nữa.
 - **`frontend/src/lib/types.ts`** -- Shared TypeScript interfaces: `Source`, `Article`, `Stats`, `ModelInfo`, `SearchHit`, `SearchResponse`.
 - Các page đã refactor: dashboard, search, chat, monitor -- dùng `api.stats()`, `api.articles()`, `api.models()`, etc.
-- **`frontend/next.config.ts`** -- Bỏ rewrites proxy. API URL lấy từ `NEXT_PUBLIC_API_URL` (env var).
-  - Local: `NEXT_PUBLIC_API_URL=http://localhost:8000`
-  - AWS: set to API Gateway URL
+- **`frontend/vite.config.ts`** -- Proxy `/api/*` tới FastAPI khi chạy local.
+  - Local: mặc định dùng proxy `/api` → `http://localhost:8000`
+  - AWS/S3: build với `VITE_API_URL=<API Gateway URL>`
 
 ### Streaming Response (SSE)
 - **`POST /chat/stream`** -- Endpoint mới trả về `text/event-stream` cho Chat UI.
@@ -235,14 +235,14 @@ Mã nguồn Terraform trong dự án triển khai các tài nguyên AWS sau:
 ### CI/CD (GitHub Actions)
 - **`.github/workflows/deploy.yml`** -- Deploy infra (main) / plan dry-run (PR). Gọi các script `scripts/deploy-*.sh` theo thứ tự.
 - **`.github/workflows/deploy-backend.yml`** -- Push Docker image lên ECR + force redeploy ECS service. Trigger bởi changes trong `app/`, `search/`, `utils/`, `Dockerfile`.
-- **`.github/workflows/deploy-frontend.yml`** -- Build Next.js → S3 sync → CloudFront invalidation. Trigger bởi changes trong `frontend/`.
+- **`scripts/deploy-frontend.sh`** -- Build Vite (`dist/`) → S3 sync → CloudFront invalidation.
 - Secrets required: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ACCOUNT_ID`, `DB_PASSWORD`, `API_GATEWAY_URL`.
 
 ### Makefile
 ```bash
 make setup    # First-time: venv + deps
 make backend  # Start FastAPI (port 8000)
-make frontend # Start Next.js (port 3000)
+make frontend # Start Vite (port 3000)
 make crawl    # Crawl news articles
 make migrate  # Migrate articles.json → RDS star-schema
 ```

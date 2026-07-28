@@ -17,7 +17,7 @@ venv: ## Create virtualenv and install deps
 backend: ## Start FastAPI backend (port 8000)
 	$(UVICORN) app.api:app --reload --port 8000
 
-frontend: ## Start Next.js frontend (port 3000)
+frontend: ## Start Vite frontend (port 3000)
 	cd frontend && npm run dev
 
 crawl: ## Crawl news articles into data/articles.json

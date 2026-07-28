@@ -3,7 +3,7 @@ import {
   Send, Bot, User, Cpu, Sparkles, Loader2, Database, ChevronDown, Scale, Search
 } from 'lucide-react';
 import { marked } from 'marked';
-import { api, ApiError } from '../lib/api';
+import { api, apiUrl } from '../lib/api';
 
 // --- MỞ RỘNG INTERFACE ĐỂ CHỨA NHIỀU LOẠI DATA ---
 interface Message {
@@ -86,8 +86,7 @@ export default function ChatPage() {
     // RAG type uses SSE streaming
     if (type === 'rag') {
       try {
-        const BASE = import.meta.env.VITE_API_URL || '';
-        const res = await fetch(`${BASE}/chat/stream`, {
+        const res = await fetch(apiUrl('/chat/stream'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ query: userMessage.content, model: selectedModel }),
@@ -109,27 +108,47 @@ export default function ChatPage() {
         const decoder = new TextDecoder();
         if (!reader) throw new Error('No reader');
 
+        let buffer = '';
+        const processEvent = (eventBlock: string) => {
+          const lines = eventBlock.split(/\r?\n/);
+          const eventName = lines.find(line => line.startsWith('event:'))?.slice(6).trim();
+          const payload = lines
+            .filter(line => line.startsWith('data:'))
+            .map(line => line.startsWith('data: ') ? line.slice(6) : line.slice(5))
+            .join('\n');
+
+          if (!payload || eventName === 'done' || payload === '[DONE]') return;
+          if (eventName === 'error') throw new Error(payload);
+
+          if (eventName === 'metadata') {
+            try {
+              meta.sourcesCount = JSON.parse(payload).total || 0;
+            } catch {
+              // Ignore malformed optional metadata; tokens can still render.
+            }
+            return;
+          }
+
+          content += payload.replace(/\\n/g, '\n').replace(/\\r/g, '\r');
+          setMessages(prev =>
+            prev.map(m => m.id === aiId ? {
+              ...m,
+              content: filterThinkingProcess(content),
+              sourcesCount: meta.sourcesCount,
+              sources: meta.sources,
+            } : m)
+          );
+        };
+
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
-
-          const text = decoder.decode(value);
-          const lines = text.split('\n').filter(l => l.startsWith('data: '));
-
-          for (const line of lines) {
-            const payload = line.slice(6); // remove 'data: '
-            if (payload === '[DONE]') continue;
-            content += payload.replace(/\\n/g, '\n');
-
-            // Update message progressively
-            setMessages(prev =>
-              prev.map(m => m.id === aiId ? {
-                ...m,
-                content: filterThinkingProcess(content),
-                sourcesCount: meta.sourcesCount,
-                sources: meta.sources,
-              } : m)
-            );
+          buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+          const events = buffer.split(/\r?\n\r?\n/);
+          buffer = events.pop() || '';
+          for (const event of events) processEvent(event);
+          if (done) {
+            if (buffer.trim()) processEvent(buffer);
+            break;
           }
         }
 

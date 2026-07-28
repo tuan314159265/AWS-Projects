@@ -1,6 +1,14 @@
 import { Stats, Article, Source, ModelInfo, SearchResponse, SearchHit } from './types';
 
-const BASE_URL = import.meta.env.VITE_API_URL || '';
+// In development Vite proxies /api/* to FastAPI. In production the value is
+// injected at build time for an external API (or left empty when FastAPI
+// serves the built frontend from the same origin).
+const BASE_URL = (
+  import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '/api' : '')
+).replace(/\/+$/, '');
+
+export const apiUrl = (path: string) =>
+  `${BASE_URL}/${path.replace(/^\/+/, '')}`;
 
 class ApiError extends Error {
   code: number;
@@ -11,7 +19,7 @@ class ApiError extends Error {
 }
 
 async function request<T>(path: string, opts?: RequestInit): Promise<T> {
-  const url = `${BASE_URL}${path}`;
+  const url = apiUrl(path);
   const res = await fetch(url, {
     ...opts,
     headers: { 'Content-Type': 'application/json', ...opts?.headers },

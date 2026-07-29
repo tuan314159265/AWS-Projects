@@ -19,6 +19,9 @@ class NewsRAGSpider(scrapy.Spider):
         'DEPTH_LIMIT': 5,
         'ROBOTSTXT_OBEY': False,
         'LOG_LEVEL': 'INFO',
+        # Tự động dừng spider một cách an toàn sau 300 giây (5 phút)
+        'CLOSESPIDER_TIMEOUT': 300,
+        
         # 1. BẬT PIPELINE: Chuyển dữ liệu cào được sang SQSPipeline (hoặc DB Pipeline của bạn)
         'ITEM_PIPELINES': {
             'crawler.pipelines.SQSPipeline': 300, # Đảm bảo đường dẫn này khớp với tên file pipeline của bạn

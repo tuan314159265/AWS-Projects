@@ -111,3 +111,13 @@ dev ───► feat/xxx ───► dev ───► main
 #### Git tags
 - Dùng `v{major}.{minor}` cho release — `v1.0`, `v1.1`
 - Mỗi tag đi kèm mô tả ngắn gọn bằng tiếng Việt
+
+#### Changelog (`CHANGELOG.md`)
+- File `CHANGELOG.md` ở thư mục gốc, duy trì xuyên suốt dự án
+- Format theo [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version theo [SemVer](https://semver.org/)
+- Mỗi milestone/release tổng hợp các thay đổi chính, phân loại:
+  - `### Added` — tính năng mới
+  - `### Changed` — thay đổi trên code hiện tại
+  - `### Fixed` — sửa lỗi
+  - `### Removed` — xoá bỏ tính năng
+- Cập nhật CHANGELOG ngay trong commit của milestone, trước khi tag release

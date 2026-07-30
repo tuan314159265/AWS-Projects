@@ -17,3 +17,5 @@ pgvector
 sqlalchemy
 langchain_aws
 
+boto3
+colorlog

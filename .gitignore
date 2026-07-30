@@ -13,5 +13,8 @@ terraform.tfstate
 terraform.tfstate.backup
 *.tfvars
 tests/
+
 PomodoroTracking/
 build/
+.env.local
+frontend/dist/

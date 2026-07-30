@@ -5,11 +5,11 @@ Chuẩn hóa cấu trúc dữ liệu qua các module: Kafka message format, Star
 
 ---
 
-## 1. Kafka Message Format (Crawler Output)
+## 1. Crawler Output (Data File)
 
-Module: `crawler/pipelines.py` → `consumer/consumer.py`
+Module: `crawler/spiders/spider.py` → `data/articles.json`
 
-### Crawler → Kafka (`news_raw` topic)
+### Crawler → JSON File (`data/articles.json`)
 
 ```json
 {
@@ -31,11 +31,12 @@ Module: `crawler/pipelines.py` → `consumer/consumer.py`
 | `author` | string | CSS selector + regex | Có thể rỗng nếu không extract được |
 | `publish_date` | string | Meta tags + CSS parse | Nhiều định dạng (ISO 8601, DD/MM/YYYY) |
 
-### Consumer → PostgreSQL (`article_metadata`)
+### Consumer → PostgreSQL (`article_metadata`) — [DEPRECATED]
 
-Kafka consumer nhận message, SHA256 hash URL, insert vào bảng `article_metadata`:
+Bảng staging `article_metadata` đã được loại bỏ cùng với `consumer/consumer.py` khi migrate lên AWS Serverless. ETL pipeline giờ đọc trực tiếp từ `data/articles.json` và ghi vào Star Schema. Các script init DB trong `scripts/init_db/` giữ lại bảng này cho mục đích migrate dữ liệu cũ.
 
 ```sql
+-- Chỉ dùng cho migrate data cũ, không còn trong pipeline chính
 CREATE TABLE article_metadata (
     id SERIAL PRIMARY KEY,
     url_hash TEXT UNIQUE,
@@ -155,7 +156,7 @@ Module: `etl/etl_warehouse.py`
 ### Input → Output mapping
 
 ```
-article_metadata (raw)
+data/articles.json (raw JSON từ crawler)
     │
     ├── Clean HTML:  regex remove tags, normalize whitespace
     ├── Remove junk:  Unicodes, special chars (Vietnamese-specific)

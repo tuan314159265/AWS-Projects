@@ -1,4 +1,4 @@
-import time
+import time, json
 from typing import List
 
 from .retriever import Retriever
@@ -50,6 +50,31 @@ class Pipeline:
                 summary="Xin lỗi, hệ thống hiện tại đang gặp sự cố. Vui lòng thử lại sau.",
                 results=[], total=0, duration_ms=0.0
             )
+
+    def stream_answer(self, query: str, model: str = None):
+        """Async generator yielding SSE events."""
+        logger.info(f"Pipeline stream: query='{query}', model={model or 'default'}")
+        try:
+            sources = self.retriever.search(query)
+            if not sources:
+                yield "event: error\ndata: Không tìm thấy nguồn tin nào\n\n"
+                return
+
+            yield "event: metadata\ndata: " + json.dumps({"total": len(sources)}) + "\n\n"
+
+            response_stream = self.generator_registry.generate_with_fallback_stream(
+                query=query, search_hits=sources, identifier=model or "default"
+            )
+
+            for token in response_stream:
+                if token:
+                    escaped = token.replace("\n", "\\n").replace("\r", "\\r")
+                    yield f"data: {escaped}\n\n"
+
+            yield "event: done\ndata: [DONE]\n\n"
+        except Exception as e:
+            logger.exception(f"Pipeline stream failed: {e}")
+            yield f"event: error\ndata: {e}\n\n"
 
     def generate_response(self, query: str, model: str = "default") -> GeneratorResponse:
         return self.ask(query, model=model)

@@ -4,6 +4,14 @@ Entrypoint for the Vectorization Pipeline.
 import time
 import sys
 import argparse
+from pathlib import Path
+
+# When this file is executed directly (``python vectorize/vectorize.py``),
+# Python puts only ``vectorize/`` on sys.path. Add the project root so that
+# top-level packages such as ``utils`` remain importable.
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from utils.logger import get_logger
 from utils.config import get_settings
 
@@ -15,7 +23,7 @@ from vectorize.service import VectorizeService
 logger = get_logger(__name__)
 settings = get_settings()
 
-def run_vectorization(batch_size: int | None = None, article_id: int | None = None, article_ids: list[int] = None):
+def run_vectorization(limit: int | None = None, article_id: int | None = None, article_ids: list[int] = None):
     """
     Run the vectorization process.
     Fetches article chunks from the warehouse, generates embeddings, and stores them in the vector repository.
@@ -43,8 +51,8 @@ def run_vectorization(batch_size: int | None = None, article_id: int | None = No
             service.process_batch_by_article_ids(article_ids)
             
         else:
-            logger.info(f"[EMBEDDING] Running scheduled batch job (size={batch_size})")
-            service.process_batch(batch_size=batch_size)
+            logger.info(f"[EMBEDDING] Running scheduled batch job (size={limit})")
+            service.process_batch(batch_size=limit)
 
         logger.info("[EMBEDDING] Vectorization Job completed successfully.")
 
@@ -76,7 +84,7 @@ if __name__ == "__main__":
 
     try:
         run_vectorization(
-            batch_size=args.batch,
+            limit=args.batch,
             article_id=args.article_id,
             article_ids=args.article_ids
         )

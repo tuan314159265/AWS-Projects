@@ -126,18 +126,17 @@ class VectorRepository:
                 LIMIT %s
             )
             SELECT
-                c.article_id, c.chunk_index, c.content, a.title, m.url,
+                c.article_id, c.chunk_index, c.content, a.title, a.url,
                 COALESCE(string_agg(DISTINCT au.author_name, ', '), 'Unknown') AS authors,
                 COALESCE(t.date::text, 'Unknown') AS publish_date,
                 tv.distance
             FROM top_vectors tv
             JOIN fact_chunks c ON tv.article_id = c.article_id AND tv.chunk_index = c.chunk_index
             JOIN fact_articles a ON c.article_id = a.article_id
-            JOIN article_metadata m ON a.url_hash = m.url_hash
             LEFT JOIN dim_time t ON a.time_id = t.time_id
             LEFT JOIN fact_article_authors faa ON faa.article_id = a.article_id
             LEFT JOIN dim_author au ON au.author_id = faa.author_id
-            GROUP BY c.article_id, c.chunk_index, c.content, a.title, m.url, t.date, tv.distance
+            GROUP BY c.article_id, c.chunk_index, c.content, a.title, a.url, t.date, tv.distance
             ORDER BY tv.distance ASC;
         """
 

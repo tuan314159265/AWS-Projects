@@ -1,0 +1,19 @@
+[
+  {
+    "Id": "newsrag-crawler-target",
+    "Arn": "arn:aws:ecs:ap-southeast-2:814808959551:cluster/newsrag-cluster",
+    "RoleArn": "arn:aws:iam::814808959551:role/newsrag-eventbridge-role",
+    "EcsParameters": {
+      "TaskDefinitionArn": "arn:aws:ecs:ap-southeast-2:814808959551:task-definition/newsrag-crawler:1",
+      "TaskCount": 1,
+      "LaunchType": "FARGATE",
+      "NetworkConfiguration": {
+        "awsvpcConfiguration": {
+          "Subnets": ["subnet-048dc1f4e2d6bd465", "subnet-0d8c1471aa391915b"],
+          "SecurityGroups": ["sg-0330980a3f9ca4eb0"],
+          "AssignPublicIp": "ENABLED"
+        }
+      }
+    }
+  }
+]

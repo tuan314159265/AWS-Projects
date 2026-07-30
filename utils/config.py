@@ -107,7 +107,13 @@ class VectorStoreConfig(BaseSettings):
         default="qdrant",
     )
 
-    host: str = Field(alias="VECTOR_HOST")
+    host: str | None = Field(alias="VECTOR_HOST", default=None)
+
+    @model_validator(mode="after")
+    def fallback_host(self) -> "VectorStoreConfig":
+        if self.provider == "pgvector" and not self.host:
+            self.host = os.getenv("DB_HOST", "localhost")
+        return self
 
     port: int = Field(alias="VECTOR_PORT", default=6333)
 
@@ -173,7 +179,26 @@ class RetrievalConfig(BaseSettings):
         alias="ENABLE_RERANKER",
         default=False,
     )
+    
+class RerankConfig(BaseSettings):
+    """Configuration for the optional Bedrock reranker."""
 
+    model_config = SHARED_CONFIG
+
+    model_id: str = Field(
+        alias="RERANK_MODEL_ID",
+        default="cohere.rerank-v3-5:0",
+    )
+
+    region: str | None = Field(
+        alias="RERANK_REGION",
+        default=None,
+    )
+
+    max_document_chars: int = Field(
+        alias="RERANK_MAX_DOCUMENT_CHARS",
+        default=8000,
+    )
     rerank_top_k: int = Field(
         alias="RERANK_TOP_K",
         default=5,
@@ -412,6 +437,8 @@ class Settings(BaseSettings):
         EmbeddingConfig()
     )
 
+    rerank: RerankConfig = RerankConfig()
+
     llm: LLMConfig = (
         LLMConfig()
     )
@@ -422,4 +449,3 @@ def get_settings() -> Settings:
     Return cached settings instance.
     """
     return Settings()
-

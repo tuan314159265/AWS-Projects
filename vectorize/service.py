@@ -11,10 +11,8 @@ from abc import ABC, abstractmethod
 
 from utils.logger import get_logger
 from vectorize.embedder.base import BaseEmbedder
-from vectorize.embedder.bedrock import BedrockEmbedder
 from vectorize.repository.warehouse_repository import WarehouseRepository
 from vectorize.repository.vector_repository import VectorRepository
-from vectorize.schemas import VectorRecord
 from .schemas import Chunk, VectorRecord
 
 logger = get_logger(__name__)

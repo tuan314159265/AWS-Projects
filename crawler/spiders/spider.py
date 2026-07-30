@@ -19,6 +19,14 @@ class NewsRAGSpider(scrapy.Spider):
         'DEPTH_LIMIT': 5,
         'ROBOTSTXT_OBEY': False,
         'LOG_LEVEL': 'INFO',
+        'CLOSESPIDER_TIMEOUT': 300,
+        'ITEM_PIPELINES': {
+            'crawler.pipelines.SQSPipeline': 300,
+        },
+        'DEFAULT_REQUEST_HEADERS': {
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+            'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
+        },
         'USER_AGENT': (
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
             if is_windows else
@@ -211,3 +219,4 @@ class NewsRAGSpider(scrapy.Spider):
             'author': author,
             'publish_date': publish_date
         }
+

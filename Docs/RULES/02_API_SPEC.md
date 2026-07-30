@@ -21,8 +21,8 @@ python main.py --mode {crawl|etl|vectorize|full|auto}
 
 | Mode | Chức năng | Luồng xử lý |
 |------|-----------|-------------|
-| `crawl` | Crawl tin tức + Kafka consumer | Khởi chạy `NewsRAGSpider` cho từng URL → `KafkaPipeline` đẩy vào topic `news_raw` → `Consumer` đọc từ Kafka insert vào `article_metadata` |
-| `etl` | ETL vào Star Schema | Đọc `article_metadata` → clean HTML → chunk văn bản (RecursiveCharacterTextSplitter, 800/150) → insert vào dimension/fact tables |
+| `crawl` | Crawl tin tức + Kafka producer [v1 legacy] | Khởi chạy `NewsRAGSpider` cho từng URL → `KafkaPipeline` đẩy vào topic `news_raw` |
+| `etl` | ETL vào Star Schema | Đọc dữ liệu từ file `data/articles.json` → clean HTML → chunk văn bản (RecursiveCharacterTextSplitter, 800/150) → insert vào dimension/fact tables |
 | `vectorize` | Embedding → Qdrant | Load SentenceTransformer → đọc chunks từ PostgreSQL → embed batch 64 → upsert Qdrant batch 256 |
 | `full` | Pipeline hoàn chỉnh | crawl → etl → vectorize (tuần tự) |
 | `auto` | Tự động 3 ca/ngày | Lên lịch chạy full pipeline lúc 08:00, 14:00, 20:00 |
@@ -31,10 +31,10 @@ python main.py --mode {crawl|etl|vectorize|full|auto}
 
 ```
 main.py --mode crawl
-  ├── do_crawl_stage()
-  │   ├── run_consumer()       [Process: Kafka Consumer → article_metadata]
-  │   └── run_spider(url)      [Process × N: Scrapy Spider → Kafka]
-  │
+  └── do_crawl_stage()
+      └── run_spider(url)      [Process × N: Scrapy Spider → data/articles.json]
+                              (Luồng Kafka consumer đã được loại bỏ ở v2. Xem CHANGELOG.md)
+
 main.py --mode etl
   └── run_etl_warehouse(limit) → etl_warehouse.py
       ├── load_schema()         [Khởi tạo bảng Star Schema]
@@ -208,7 +208,7 @@ class SearchConfig(BaseModel):
 
 | Tình huống | Cách xử lý | Module |
 |-----------|-----------|--------|
-| Mất kết nối Kafka | Consumer reconnect + retry | `consumer.py` |
+| Mất kết nối Kafka | Consumer reconnect + retry (v1 legacy, đã xoá) | `consumer.py` (removed) |
 | Không tìm thấy kết quả Qdrant | Fallback "Xin lỗi, không tìm thấy thông tin..." | `engine.py` |
 | LLM API fail | Fallback chain model → "Xin lỗi, hiện tại không thể..." | `generator.py` |
 | Database connection lost | psycopg2 InterfaceError → reconnect | `consumer.py`, `etl_warehouse.py` |

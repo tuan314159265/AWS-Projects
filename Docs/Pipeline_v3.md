@@ -426,7 +426,7 @@ docker tag news-crawler:latest <ECR_URI>/news-crawler:latest
 docker push <ECR_URI>/news-crawler:latest
 
 # 4. Deploy Lambda functions
-./deploy.sh
+./scripts/deploy.sh
 ```
 
 ## Phát triển local

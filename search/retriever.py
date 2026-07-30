@@ -12,6 +12,7 @@ from utils.logger import get_logger
 from vectorize.embedder.bedrock import BedrockEmbedder
 from vectorize.repository.vector_repository import VectorRepository
 from .schemas import SearchHit
+from .rerank import BedrockReranker
 from utils.config import get_settings
 
 logger = get_logger(__name__)
@@ -22,13 +23,22 @@ class Retriever:
     Retriever class for the RAG FastAPI backend.
     """
 
-    def __init__(
-        self
-    ) -> None:
+    def __init__(self) -> None:
         logger.info("[RETRIEVER] Initializing RetrievalService...")
         self._embedder = BedrockEmbedder()
         self._vector_store = VectorRepository()
         self._top_k = settings.retrieval.top_k
+
+        self._reranker = None
+        if settings.retrieval.enable_reranker:
+            try:
+                self._reranker = BedrockReranker()
+                logger.info("[RETRIEVER] Reranker đã được bật.")
+            except Exception as exc:
+                logger.warning(
+                    "[RETRIEVER] Không khởi tạo được reranker, dùng vector search: %s",
+                    exc,
+                )
 
 
     def search(self, query: str) -> List[SearchHit]:
@@ -57,6 +67,17 @@ class Retriever:
                     }
                 )
                 search_hits.append(hit)
+
+            if self._reranker and search_hits:
+                try:
+                    search_hits = self._reranker.rerank(
+                        query=query,
+                        hits=search_hits
+                    )
+                except Exception as e:
+                    logger.warning("[RETRIEVER] Rerank thất bại, giữ thứ tự vector: %s", e)
+
+            return search_hits
 
         except Exception as e:
             logger.error(f"[RETRIEVER] Search failed: {e}")

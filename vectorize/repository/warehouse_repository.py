@@ -105,12 +105,11 @@ class WarehouseRepository:
         """Build the base SQL query."""
         sql = """
             SELECT
-                c.article_id, c.chunk_index, c.content, a.title, m.url,
+                c.article_id, c.chunk_index, c.content, a.title, a.url,
                 COALESCE(string_agg(DISTINCT au.author_name, ', '), 'Unknown') AS authors,
                 COALESCE(t.date::text, 'Unknown') AS publish_date
             FROM fact_chunks c
             JOIN fact_articles a ON c.article_id = a.article_id
-            JOIN article_metadata m ON a.url_hash = m.url_hash
             LEFT JOIN dim_time t ON a.time_id = t.time_id
             LEFT JOIN fact_article_authors faa ON faa.article_id = a.article_id
             LEFT JOIN dim_author au ON au.author_id = faa.author_id
@@ -120,10 +119,10 @@ class WarehouseRepository:
         """
         
         if filter_article_id:
-            sql += "\nWHERE c.article_id = %s\n"
+            sql += "\nAND c.article_id = %s\n"
             
         sql += """
-            GROUP BY c.article_id, c.chunk_index, c.content, a.title, m.url, t.date
+            GROUP BY c.article_id, c.chunk_index, c.content, a.title, a.url, t.date
             ORDER BY c.chunk_index
         """
         
@@ -166,5 +165,4 @@ class WarehouseRepository:
             authors=row["authors"],
             publish_timestamp=timestamp,
         )
-    
     

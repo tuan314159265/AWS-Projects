@@ -65,14 +65,14 @@ export default function Sidebar({ role }: SidebarProps) {
         </div>
 
         <div className="border-t border-slate-700/50 pt-4 flex items-center gap-3 px-2 pb-2">
-          <img 
-            src="https://ui-avatars.com/api/?name=Tien+San&background=f1f5f9&color=0f172a&bold=true" 
-            className="w-10 h-10 rounded-full border-2 border-slate-600" 
-            alt="Tien San" 
+          <img
+            src="/static/file.jpg"
+            className="w-10 h-10 rounded-full border-2 border-indigo-500 object-cover"
+            alt="4ReiCord"
           />
           <div className="overflow-hidden">
-            <p className="text-sm font-bold text-white tracking-wide">Tien_sann</p>
-            <p className="text-[11px] text-slate-400 font-medium">Developer</p>
+            <p className="text-sm font-bold text-white tracking-wide">4ReiCord</p>
+            <p className="text-[11px] text-slate-400 font-medium">Team</p>
           </div>
         </div>
       </div>

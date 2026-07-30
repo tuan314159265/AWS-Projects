@@ -122,7 +122,16 @@ export default function ChatPage() {
 
           if (eventName === 'metadata') {
             try {
-              meta.sourcesCount = JSON.parse(payload).total || 0;
+              const parsed = JSON.parse(payload);
+              const raw = parsed.sources || [];
+              // Dedup by URL (multiple chunks from same article)
+              const seen = new Set();
+              meta.sources = raw.filter((s: any) => {
+                if (seen.has(s.url)) return false;
+                seen.add(s.url);
+                return true;
+              });
+              meta.sourcesCount = meta.sources.length;
             } catch {
               // Ignore malformed optional metadata; tokens can still render.
             }

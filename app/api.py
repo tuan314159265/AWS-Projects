@@ -482,17 +482,25 @@ async def get_pipeline_status():
         cur.execute("SELECT count(*) FROM fact_articles")
         total_articles = cur.fetchone()['count']
 
-        # Lấy sơ đồ bảng thực tế từ DB
+        # Lấy thời gian crawl gần nhất (bài báo mới nhất trong DB)
         cur.execute("""
-            SELECT
-                t.table_name,
-                json_agg(json_build_object('name', c.column_name, 'type', c.data_type)) as columns
-            FROM information_schema.tables t
-            JOIN information_schema.columns c ON t.table_name = c.table_name
-            WHERE t.table_schema = 'public' AND t.table_type = 'BASE TABLE'
-            GROUP BY t.table_name
+            SELECT MAX(t.date) as last_crawl
+            FROM fact_articles f
+            LEFT JOIN dim_time t ON f.time_id = t.time_id
         """)
-        db_schema = cur.fetchall()
+        last_crawl_row = cur.fetchone()
+        last_crawl = last_crawl_row['last_crawl'] if last_crawl_row and last_crawl_row['last_crawl'] else None
+        last_crawl_str = last_crawl.strftime("%Y-%m-%d %H:%M:%S") if last_crawl else "Chưa có dữ liệu"
+
+        # Đếm số bài crawl được hôm nay
+        cur.execute("""
+            SELECT COUNT(*) as today_count
+            FROM fact_articles f
+            JOIN dim_time t ON f.time_id = t.time_id
+            WHERE t.date >= CURRENT_DATE
+        """)
+        today_row = cur.fetchone()
+        today_count = today_row['today_count'] if today_row else 0
 
         return {
             "services": {
@@ -503,7 +511,9 @@ async def get_pipeline_status():
             },
             "stats": {
                 "total_processed": total_articles,
-                "last_run": time.strftime("%H:%M:%S")
+                "last_run": time.strftime("%H:%M:%S"),
+                "last_crawl": last_crawl_str,
+                "today_articles": today_count
             },
             "db_schema": db_schema,
             "pipeline_steps": [
@@ -516,10 +526,10 @@ async def get_pipeline_status():
                 {"id": "s7", "name": "Batch Insert", "type": "load"}
             ],
             "components": [
-                {"name": "Crawler", "status": "idle", "processed": 120},
-                {"name": "Kafka Producer", "status": "active", "processed": 120},
-                {"name": "Spark/ETL", "status": "active", "processed": 115},
-                {"name": "Vector Ingestion", "status": "active", "processed": 115}
+                {"name": "Crawler", "status": "idle", "processed": total_articles},
+                {"name": "Kafka Producer", "status": "active", "processed": total_articles},
+                {"name": "ETL", "status": "active", "processed": total_articles},
+                {"name": "Vector Ingestion", "status": "active", "processed": today_count}
             ]
         }
     except Exception as e:

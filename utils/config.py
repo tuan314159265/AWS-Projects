@@ -167,7 +167,7 @@ class RetrievalConfig(BaseSettings):
 
     top_k: int = Field(
         alias="TOP_K",
-        default=20,
+        default=15,
     )
 
     similarity_threshold: float = Field(

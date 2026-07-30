@@ -60,7 +60,13 @@ class Pipeline:
                 yield "event: error\ndata: Không tìm thấy nguồn tin nào\n\n"
                 return
 
-            yield "event: metadata\ndata: " + json.dumps({"total": len(sources)}) + "\n\n"
+            yield "event: metadata\ndata: " + json.dumps({
+                    "total": len(sources),
+                    "sources": [
+                        {"title": s.title, "url": s.url}
+                        for s in sources[:15]
+                    ]
+                }) + "\n\n"
 
             response_stream = self.generator_registry.generate_with_fallback_stream(
                 query=query, search_hits=sources, identifier=model or "default"

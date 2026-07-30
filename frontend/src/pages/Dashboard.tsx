@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   RefreshCw, FileText, Clock, Box,
   TrendingUp, PieChart as PieIcon, Users, Activity, Server, Database
@@ -17,31 +17,42 @@ export default function DashboardPage() {
     top_authors: [] as any[],
     source_distribution: [] as any[],
     trend_data: [] as any[],
-    latest_articles: [] as any[]
+    latest_articles: [] as any[],
+    last_crawl: '...',
+    today_count: 0,
+    pipeline_components: [] as any[],
   });
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      const data = await api.stats();
+      const [dashboardData, pipelineData] = await Promise.all([
+        api.stats(),
+        api.pipelineStatus().catch(() => ({ stats: {}, components: [] })),
+      ]);
+      const pd = pipelineData as any;
       setStats({
-        total_articles: data.total_articles || 0,
-        total_sources: data.total_sources || 0,
-        total_vectors: data.total_vectors || 0,
-        top_authors: data.top_authors || [],
-        source_distribution: (data.source_distribution || []).map((item, idx) => ({
+        total_articles: dashboardData.total_articles || 0,
+        total_sources: dashboardData.total_sources || 0,
+        total_vectors: dashboardData.total_vectors || 0,
+        top_authors: dashboardData.top_authors || [],
+        source_distribution: (dashboardData.source_distribution || []).map((item: any, idx: number) => ({
           ...item, color: COLORS[idx % COLORS.length]
         })),
-        trend_data: data.trend_data || [],
-        latest_articles: data.latest_articles || []
+        trend_data: dashboardData.trend_data || [],
+        latest_articles: dashboardData.latest_articles || [],
+        last_crawl: pd?.stats?.last_crawl || 'N/A',
+        today_count: pd?.stats?.today_articles || 0,
+        pipeline_components: pd?.components || [],
       });
     } catch (e) {
       console.error("Lỗi fetch stats:", e);
     } finally {
       setTimeout(() => setIsRefreshing(false), 500);
     }
-  };
+  }, []);
+
 
   useEffect(() => { fetchStats(); }, []);
 
@@ -78,7 +89,7 @@ export default function DashboardPage() {
         <StatCard 
           title="Total Vectors" 
           value={stats.total_vectors.toLocaleString()} 
-          subValue="Qdrant Cloud" 
+          subValue="pgvector"
           subText="" 
           icon={Box} 
           colorClass="text-purple-500" 
@@ -105,15 +116,15 @@ export default function DashboardPage() {
           bgClass="bg-emerald-50" 
           trendTextClass="text-emerald-600 font-semibold"
         />
-        <StatCard 
-          title="Latest Crawl" 
-          value="5 mins ago" 
-          subValue="Hệ thống ổn định" 
-          subText="" 
-          icon={Clock} 
-          colorClass="text-orange-500" 
-          bgClass="bg-orange-50" 
-          trendTextClass="text-orange-600 font-semibold" 
+        <StatCard
+          title="Latest Crawl"
+          value={stats.last_crawl}
+          subValue={`Hôm nay: ${stats.today_count} bài`}
+          subText=""
+          icon={Clock}
+          colorClass="text-orange-500"
+          bgClass="bg-orange-50"
+          trendTextClass="text-orange-600 font-semibold"
         />
       </div>
 
@@ -224,12 +235,14 @@ export default function DashboardPage() {
         <div className="lg:col-span-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
           <h3 className="font-bold text-slate-700 flex items-center gap-2 mb-4"><Activity size={18} className="text-rose-500" /> Hoạt động gần đây</h3>
           <ul className="space-y-4">
-            {[
-              { text: 'Crawl hoàn thành (vnexpress.net)', time: '5 mins ago' },
-              { text: 'ETL nạp Warehouse thành công', time: '8 mins ago' },
-              { text: 'Vectorize: Push lên Qdrant', time: '10 mins ago' },
-              { text: 'Làm sạch dữ liệu Text', time: '18 mins ago' }
-            ].map((item, idx) => (
+            {(stats.pipeline_components.length > 0 ? [
+              { text: `Crawl: ${stats.pipeline_components[0]?.processed || 0} articles`, time: stats.last_crawl },
+              { text: `ETL Warehouse: ${stats.pipeline_components[2]?.processed || 0} articles`, time: 'ok' },
+              { text: `Vectorize pgvector: ${stats.today_count} articles today`, time: 'ok' },
+              { text: `Hôm nay (${stats.today_count} bài mới)`, time: new Date().toLocaleTimeString() },
+            ] : [
+              { text: 'Đang tải trạng thái...', time: '' },
+            ]).map((item, idx) => (
               <li key={idx} className="flex justify-between items-center text-xs">
                 <div className="flex items-center gap-2 text-slate-600 font-medium">
                   <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
@@ -248,7 +261,7 @@ export default function DashboardPage() {
             {[
               { label: 'PostgreSQL (Metadata)', value: stats.total_articles.toLocaleString(), unit: 'rows' },
               { label: 'Data Warehouse (Fact)', value: stats.total_articles.toLocaleString(), unit: 'rows' },
-              { label: 'Qdrant Collection', value: stats.total_vectors.toLocaleString(), unit: 'vectors' },
+              { label: 'pgvector', value: stats.total_vectors.toLocaleString(), unit: 'vectors' },
               { label: 'Hệ thống Server', value: 'Healthy', unit: '🟢' },
             ].map((stat, idx) => (
               <div key={idx} className="flex justify-between items-center py-2 border-b border-slate-50 last:border-0">
